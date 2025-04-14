@@ -282,8 +282,9 @@ def remove_none(value):
 
 class Client:
 
-    def __init__(self, socket_path=None) -> None:
+    def __init__(self, socket_path=None, allow_write=True) -> None:
         self.serve = Serve(socket_path)
+        self.allow_write = allow_write
 
     def lock(self):
         value = self.serve.request_json("/lock", "POST")
@@ -313,51 +314,109 @@ class Client:
         value = self.serve.request_json(f"/object/template/{type}", "GET")
         return value["data"]["template"] if value["success"] else None
 
-    def add_attachment(self, uuid, fpath=None):
-        params = dict(itemid=uuid)
-        value = self.serve.request_file(f"/attachment", "POST", fpath=fpath, params=params)
-        return value["data"] if value["success"] else None
-
-    def get_uri(self, uuid):
+    def uri(self, uuid):
         value = self.serve.request_json(f"/object/uri/{uuid}", "GET")
         return value["data"] if value["success"] else None
 
-    def get_totp(self, uuid):
+    def totp(self, uuid):
         value = self.serve.request_json(f"/object/totp/{uuid}", "GET")
         return value["data"] if value["success"] else None
 
-    def get_notes(self, uuid):
+    def notes(self, uuid):
         value = self.serve.request_json(f"/object/notes/{uuid}", "GET")
         return value["data"] if value["success"] else None
 
-    def get_exposed(self, uuid):
+    def exposed(self, uuid):
         value = self.serve.request_json(f"/object/exposed/{uuid}", "GET")
         return value["data"] if value["success"] else None
 
-    def get_password(self, uuid):
+    def password(self, uuid):
         value = self.serve.request_json(f"/object/password/{uuid}", "GET")
         return value["data"] if value["success"] else None
 
-    def get_username(self, uuid):
+    def username(self, uuid):
         value = self.serve.request_json(f"/object/username/{uuid}", "GET")
         return value["data"] if value["success"] else None
 
-    def get_attachment(self, attachment_id, item_id):
+    def attachment(self, attachment_id, item_id):
         params = dict(itemid=item_id)
         value = self.serve.request_json(f"/object/attachment/{attachment_id}", "GET", params=params, text=True)
         return value
 
-    def add_item(self, item):
-        value = self.serve.request_json(f"/object/item", "GET", value=item)
+    def get(self, uuid, type="item"):
+        value = self.serve.request_json(f"/object/{type}/{uuid}", "GET")
+        return value["data"] if value["success"] else None
+
+    def new(self, item, type="item"):
+        assert self.allow_write
+        if type == "send":
+            assert item.get("type") == 0
+        value = self.serve.request_json(f"/object/{type}", "GET", value=item)
         return value
 
-    def get_item(self, uuid):
-        value = self.serve.request_json(f"/object/item/{uuid}", "GET")
+    def new_attachment(self, uuid, fpath=None):
+        assert self.allow_write
+        params = dict(itemid=uuid)
+        value = self.serve.request_file(f"/attachment", "POST", fpath=fpath, params=params)
         return value["data"] if value["success"] else None
 
-    def list_items(self, organization_id=None, collection_id=None, folder_id=None, url=None, trash=None, search=None):
-        params = remove_none(dict(organization_id=organization_id, collection_id=collection_id, folder_id=folder_id, url=url, trash=trash, search=search))
-
-        value = self.serve.request_json(f"/list/object/items", "GET", params=params)
-
+    def edit(self, item, type="item"):
+        assert self.allow_write
+        if type == "send":
+            assert item.get("type") == 0
+        value = self.serve.request_json(f"/object/{type}/{uuid}", "PUT", value=item)
         return value["data"] if value["success"] else None
+
+    def delete(self, uuid, type="item"):
+        assert self.allow_write
+        value = self.serve.request_json(f"/object/{type}/{uuid}", "DELETE")
+        return value["success"]
+
+    def restore(self, uuid):
+        assert self.allow_write
+        value = self.serve.request_json(f"/restore/item/{uuid}", "POST")
+        return value["success"]
+
+    def list(self, organization_id=None, collection_id=None, folder_id=None, url=None, trash=None, search=None, type="item"):
+        if type.rstrip("s") == "item":
+            params = remove_none(dict(organizationId=organization_id, collectionId=collection_id, folderId=folder_id, url=url, trash=trash, search=search))
+        else:
+            params = remove_none(dict(search=search))
+        if type.rstrip("s") == "send":
+            type = "send"
+        else:
+            type = type.rstrip("s") + "s"
+        value = self.serve.request_json(f"/list/object/{type}s", "GET", params=params)
+        return value["data"] if value["success"] else None
+
+    def confirm(self, uuid, organization_id):
+        assert self.allow_write
+        params = dict(organizationId=organization_id)
+        value = self.serve.request_json(f"/confirm/org-member/{uuid}", "POST", params=params)
+        return value
+
+    def move(self, item_id, organization_id):
+        assert self.allow_write
+        value = self.serve.request_json(f"/move/{item_id}/{organization_id}", "POST")
+        return value
+
+    def pending(self, organization_id):
+        assert self.allow_write
+        value = self.serve.request_json(f"/device-approval/{organization_id}", "GET")
+        return value
+
+    def trust(self, organization_id, request_id=None):
+        assert self.allow_write
+        if request_id is None:
+            value = self.serve.request_json(f"/device-approval/{organization_id}/approve-all", "POST")
+        else:
+            value = self.serve.request_json(f"/device-approval/{organization_id}/approve/{request_id}", "POST")
+        return value
+
+    def deny(self, organization_id, request_id=None):
+        assert self.allow_write
+        if request_id is None:
+            value = self.serve.request_json(f"/deny-approval/{organization_id}/deny-all", "GET")
+        else:
+            value = self.serve.request_json(f"/device-approval/{organization_id}/deny/{request_id}", "POST")
+        return value["success"]
