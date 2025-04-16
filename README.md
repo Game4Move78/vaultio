@@ -49,4 +49,4 @@ with Client() as client:
 
 ## More examples
 
-See [https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/shell.py](shell.py) and [https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py](cli.py) for examples.
+See [shell.py](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/shell.py) and [cli.py](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py) for examples.
