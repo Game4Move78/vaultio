@@ -1,23 +1,25 @@
 [project]
 name = "pybw"
 version = "0.1.0"
-description = ""
+description = "Unofficial tool for stateless Bitwarden vault management"
 authors = [
-    {name = "Patrick Lenihan", email = "p.j.lenihan1@leeds.ac.uk"}
+    {name = "Patrick Lenihan", email = "patrick@plenihan.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "nodeenv (>=1.9.1,<2.0.0)"
+    "nodeenv (>=1.9.1,<2.0.0)",
+    "fire (>=0.7.0,<0.8.0)",
+    "psutil (>=7.0.0,<8.0.0)",
+    "rich (>=14.0.0,<15.0.0)"
 ]
 
 [tool.poetry]
 packages = [{include = "pybw", from = "src"}]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-install-bwcli = "pybw.install:main"
+pybw = "pybw.cli:main"
