@@ -6,6 +6,10 @@ This an unofficial Python API for Bitwarden, utilising the stateless local expre
 
 Currently Bitwarden only serves this API through HTTP over a local TCP port, which has security risks if not guarded properly. To address this, I have made a [https://github.com/bitwarden/clients/pull/14262](PR) that may or may not get merged, but allows restricting the CLI server to socket-based and IPC-style communication. This means that requests can not be seen by other users and processes, communicating over socket.socketpair or bound unix domain sockets.
 
+## Why not invoke the BW CLI for every command?
+
+You can! It just requires launching the nodejs app every time. This method is fast because it communicates directly over sockets or over the network.
+
 ## Install
 
 ```sh
@@ -50,3 +54,7 @@ with Client() as client:
 ## More examples
 
 See [shell.py](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/shell.py) and [cli.py](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py) for examples.
+
+## Does it support HTTPS?
+
+Not supported, but its possible using [caddy](https://github.com/Game4Move78/bw-serve-encrypted).
