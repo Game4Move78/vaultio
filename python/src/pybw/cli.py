@@ -18,8 +18,8 @@ class CLI(Client):
             port = int(8087)
             super().__init__(host=host, port=port, serve=False, wait=False)
 
-    def build(self, official=True):
-        build(official)
+    def build(self, unofficial=True):
+        build(unofficial)
 
 def main():
     try:
