@@ -8,7 +8,7 @@ Currently Bitwarden only serves this API through HTTP over a local TCP port, whi
 
 ## Why not invoke the BW CLI for every command?
 
-You can! It just requires launching the nodejs app every time. This API is fast because it communicates directly over sockets or over the network.
+You can! It just requires launching the nodejs app every time. This API is fast because it communicates directly over a socket connection rather than launching a new process.
 
 ## Install
 
