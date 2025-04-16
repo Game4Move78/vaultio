@@ -4,11 +4,11 @@
 
 This an unofficial Python API for Bitwarden, utilising the stateful local express web server that comes as part of the command line client. The [bw serve](https://bitwarden.com/help/cli/#serve) command launches an offline REST API for vault management, and this is a Python API to use its endpoints. This interface is stateless and never caches credentials that are served, and simply passes requests onto the Bitwarden background process through a socket connection.
 
-Currently Bitwarden only serves this API through HTTP over a local TCP port, which has security risks if not guarded properly. To address this, I have made a [PR](https://github.com/bitwarden/clients/pull/14262) that may or may not get merged, but allows restricting the CLI server to socket-based and IPC-style communication. This means that requests can not be seen by other users and processes, communicating over socket.socketpair or bound unix domain sockets.
+Currently Bitwarden only serves this API through HTTP over a local TCP port, which has security risks if not guarded properly. To address this, I have made a [PR](https://github.com/bitwarden/clients/pull/14262) that may or may not get merged, but allows restricting the CLI server to socket-based and IPC-style communication. This means that requests can not be seen by other users and processes, communicating over Python's `socket.socketpair` or bound unix domain sockets.
 
 ## Why not invoke the BW CLI for every command?
 
-You can! It just requires launching the nodejs app every time. This method is fast because it communicates directly over sockets or over the network.
+You can! It just requires launching the nodejs app every time. This API is fast because it communicates directly over sockets or over the network.
 
 ## Install
 
