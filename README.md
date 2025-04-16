@@ -28,7 +28,7 @@ pybw build
 
 ### Fork (for socket support)
 
-This version is built from source using my [https://github.com/Game4Move78/clients/tree/feat/unix-socket-support](fork) of the Bitwarden repo. The changes are minor and can be viewed [https://github.com/bitwarden/clients/pull/14262/files](here).
+This version is built from source using my [fork](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) of the Bitwarden repo. The changes are minor and can be viewed [here](https://github.com/bitwarden/clients/pull/14262/files).
 
 ```sh
 pybw build --unofficial
