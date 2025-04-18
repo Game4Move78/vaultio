@@ -30,7 +30,7 @@ Using Bitwarden's npm package.
 pybw build
 ```
 
-### Fork (for socket support)
+### Fork (for Socket Support)
 
 This version is built from source using my [fork](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) of the Bitwarden repo. The changes are minor and can be viewed [here](https://github.com/bitwarden/clients/pull/14262/files).
 
@@ -38,7 +38,15 @@ This version is built from source using my [fork](https://github.com/Game4Move78
 pybw build --unofficial
 ```
 
-## Basic Usage
+## Usage
+
+### CLI
+
+```shell
+pybw --help
+```
+
+### Print status, items, and folders
 
 ```python
 with Client() as client:
@@ -51,9 +59,11 @@ with Client() as client:
         print(item["name"])
 ```
 
-## More examples
+### More examples
 
-See [shell.py](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/shell.py) and [cli.py](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py) for examples.
+-[Creating a CLI](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py)
+- [Creating a shell](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/shell.py)
+-[Performing backups](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/backup.py)
 
 ## Does it support HTTPS?
 
