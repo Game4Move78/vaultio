@@ -8,8 +8,8 @@ import socket
 import subprocess
 from pathlib import Path
 import time
-
-from urllib.parse import urlencode
+from email.utils import encode_rfc2231
+from urllib.parse import urlencode, quote
 
 from pybw.util import BW_PATH, CACHE_DIR, SOCK_SUPPORT, kill_process_listening_on_socket
 
@@ -209,7 +209,7 @@ class Serve:
             r"HTTP/1.1 (?P<status>\d{3}) (?P<reason>[^\r\n]+)",
             r"(?P<headers>(?:[^\r\n]+:\s*[^\r\n]*\r\n)*)",
             ""
-        )).encode())
+        )).encode("utf-8"))
 
         bfr = bytearray()
 
@@ -299,7 +299,7 @@ class Serve:
             if content_type:
                 req_chunks.append(f"Content-Type: {content_type}")
 
-        req_chunks = (("\r\n".join(req_chunks) + "\r\n\r\n").encode(),)
+        req_chunks = (("\r\n".join(req_chunks) + "\r\n\r\n").encode("utf-8"),)
 
         if body is not None:
             req_chunks = itertools.chain(req_chunks, body)
@@ -343,14 +343,14 @@ class Serve:
         return json.loads(text)
 
     def file_pre_body(self, fpath, boundary):
-        filename = os.path.basename(fpath)
+        filename = encode_rfc2231(os.path.basename(fpath))
         mime_type, _ = mimetypes.guess_type(fpath) or "application/octet-stream"
         mime_type = mime_type or "application/octet-stream"
         field_name = "file"
 
         return ("\r\n".join((
             f"--{boundary}",
-            f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"',
+            f'Content-Disposition: form-data; name="{field_name}"; filename*={filename}',
             f"Content-Type: {mime_type}",
         )) + "\r\n\r\n").encode()
 
