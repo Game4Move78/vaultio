@@ -68,15 +68,15 @@ class HttpResponse:
 
 def require_bw():
     if BW_PATH is None:
-        Exception("BW CLI not found. Try `vaultio build` to resolve dependencies.")
+        raise Exception("BW CLI not found. Try `vaultio build` to resolve dependencies.")
 
 def require_bw_socks():
     if SOCK_SUPPORT is None:
-        Exception("BW CLI supporting socket serve not found. Try `vaultio build ` to resolve dependencies.")
+        raise Exception("BW CLI supporting socket serve not found. Try `vaultio build ` to resolve dependencies.")
 
 def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, **kwds):
     if BW_PATH is None:
-        Exception("BW CLI supporting socket serve not found. Try `vaultio build` to resolve dependencies.")
+        raise Exception("BW CLI supporting socket serve not found. Try `vaultio build` to resolve dependencies.")
     kill_process_listening_on_socket(sock_path)
 
     args = [str(CACHE_DIR / "bin" / "bw"), "serve", "--hostname"]
