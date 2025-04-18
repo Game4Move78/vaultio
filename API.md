@@ -12,13 +12,13 @@ client = Client(host="127.0.0.1", port=8087)
 
 **Parameters:**
 - `socks`: Pre-existing socket connections (optional)
-- `host`: Server host
-- `port`: Server port
+- `host`: Server host (optional)
+- `port`: Server port (optional)
 - `sock_path`: Unix socket path (optional)
 - `fd`: File descriptor (optional)
-- `serve`: Whether to start the server
-- `wait`: Whether to wait for socket readiness
-- `allow_write`: If `False`, disables all mutating operations
+- `serve`: Whether to start the server (optional)
+- `wait`: Whether to wait for socket readiness (optional)
+- `allow_write`: If `False`, disables all mutating operations (optional)
 
 ---
 
