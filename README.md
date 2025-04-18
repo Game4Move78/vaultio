@@ -50,7 +50,7 @@ This installs the CLI from the official NPM package [`@bitwarden/cli`](https://w
 
 ### Option 2: Unofficial Fork with Socket Support
 
-A [pull request](https://github.com/bitwarden/clients/pull/14262) introduces support for **Unix sockets** and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security.
+I made a [pull request](https://github.com/bitwarden/clients/pull/14262) that introduces support for Unix sockets and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security.
 
 To enable this:
 - **Manually build** from the fork: [Game4Move78/clients](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) and copy the binary to:
