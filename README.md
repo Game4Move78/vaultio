@@ -2,7 +2,7 @@
 
 ## Overview
 
-**`pybw`** is an **unofficial Python API** for managing Bitwarden vaults via the Bitwarden CLI. Instead of launching a new CLI process for each operation, it runs the CLI once in the background and communicates with it through a **private socket connection**. This improves performance and avoids redundant unlocks.
+**`pybw`** is an **unofficial Python API** for managing Bitwarden vaults via the Bitwarden CLI. Instead of launching a new CLI process for each operation, it runs the CLI once in the background and communicates with it through a **private socket connection**. This improves performance and provides a secure method for using the [serve API](https://bitwarden.com/help/vault-management-api/).
 
 ## How It Works
 
