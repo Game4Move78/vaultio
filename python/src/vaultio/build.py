@@ -113,7 +113,7 @@ def build_bw():
 
     shutil.rmtree(root_dir)
 
-def build(unofficial=True):
+def build(unofficial=False):
     if unofficial:
         log_info("Unofficial build mode: building Bitwarden CLI fork from source.")
         build_nodeenv()

@@ -34,7 +34,7 @@ class CLI(Client):
             port = int(8087)
             super().__init__(host=host, port=port, serve=False, wait=False)
 
-    def build(self, unofficial=True):
+    def build(self, unofficial=False):
         build(unofficial)
 
 def main():
