@@ -1,7 +1,7 @@
 # Python API for Bitwarden Vault Management
 
 ## Description
-This an unofficial Python API for Bitwarden Vault Management using the Bitwarden CLI. Rather than launching the CLI app repeatedly for every action, it launches the CLI once in a background process and sends commands through a private socket connection.
+This an unofficial Python API for Bitwarden Vault Management using the Bitwarden CLI. Rather than launching the CLI app repeatedly for every action, it launches the CLI once in a background process and invokes actions through a private socket connection.
 
 ## Implementation
 The implementation is built around the stateful express web server launched by the [serve](https://bitwarden.com/help/cli/#serve) command, which deploys a local REST API for performing CLI actions. `pybw` uses this API internally, relying on the Bitwarden CLI for all actions. It never caches any credentials that are served and simply passes requests onto the Bitwarden background process and returns the results.
