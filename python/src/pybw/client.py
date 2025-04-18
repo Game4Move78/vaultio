@@ -67,10 +67,16 @@ class Client:
         value = self._serve.request_json(f"/object/template/{type}", "GET")
         return value["data"]["template"] if value["success"] else None
 
-    def attachment(self, attachment_id, item_id):
+    def get_attachment(self, attachment_id, item_id):
         params = dict(itemid=item_id)
-        value = self._serve.request_text(f"/object/attachment/{attachment_id}", "GET", params=params)
+        value = self._serve.request_bytes(f"/object/attachment/{attachment_id}", "GET", params=params)
         return value
+
+    def new_attachment(self, uuid, fpath=None):
+        assert self.allow_write
+        params = dict(itemid=uuid)
+        value = self._serve.request_file(f"/attachment", "POST", fpath=fpath, params=params)
+        return value["data"] if value["success"] else None
 
     GET_TYPES = {
         "uri",
@@ -100,12 +106,6 @@ class Client:
         if type == "send":
             assert item.get("type") == 0
         value = self._serve.request_json(f"/object/{type}", "GET", value=item)
-        return value["data"] if value["success"] else None
-
-    def new_attachment(self, uuid, fpath=None):
-        assert self.allow_write
-        params = dict(itemid=uuid)
-        value = self._serve.request_file(f"/attachment", "POST", fpath=fpath, params=params)
         return value["data"] if value["success"] else None
 
     def edit(self, value, type="item"):
