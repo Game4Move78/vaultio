@@ -28,7 +28,7 @@ To enable this functionality currently you have to either build from source usin
 
 ### API
 
-[Documentation](https://github.com/Game4Move78/pybw/blob/master/python/API.md)
+[Documentation](https://github.com/Game4Move78/pybw/blob/master/API.md)
 
 ### CLI wrapper
 
