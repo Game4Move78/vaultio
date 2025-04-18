@@ -1,4 +1,4 @@
-# Python API for Bitwarden Vault Management
+# Unofficial Python API for Bitwarden Vault Management
 
 ## Overview
 
@@ -109,3 +109,9 @@ with Client() as client:
 ## 🔐 HTTPS Support
 
 Not currently supported directly, but it's possible using [Caddy](https://github.com/Game4Move78/bw-serve-encrypted).
+
+## Disclaimer
+
+This project is not associated with [https://bitwarden.com/](Bitwarden) or Bitwarden, Inc. These contributions are independent of Bitwarden and are reviewed by other maintainers.
+
+Please note: We cannot be held liable for any data loss that may occur while using `vaultio`. This includes passwords, attachments, and other information handled by the application. We highly recommend performing regular backups of your files and database. However, should you experience data loss, we encourage you to contact us immediately.
