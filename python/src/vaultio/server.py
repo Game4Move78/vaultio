@@ -1,17 +1,17 @@
-# This file is part of pybw.
+# This file is part of vaultio.
 #
-# pybw is free software: you can redistribute it and/or modify
+# vaultio is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# pybw is distributed in the hope that it will be useful,
+# vaultio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with pybw.  If not, see <https://www.gnu.org/licenses/>.
+# along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
 import itertools
 import json
@@ -26,7 +26,7 @@ import time
 from email.utils import encode_rfc2231
 from urllib.parse import urlencode, quote
 
-from pybw.util import BW_PATH, CACHE_DIR, SOCK_SUPPORT, kill_process_listening_on_socket
+from vaultio.util import BW_PATH, CACHE_DIR, SOCK_SUPPORT, kill_process_listening_on_socket
 
 class HttpResponseError(Exception):
 
@@ -68,15 +68,15 @@ class HttpResponse:
 
 def require_bw():
     if BW_PATH is None:
-        Exception("BW CLI not found. Try `pybw build` to resolve dependencies.")
+        Exception("BW CLI not found. Try `vaultio build` to resolve dependencies.")
 
 def require_bw_socks():
     if SOCK_SUPPORT is None:
-        Exception("BW CLI supporting socket serve not found. Try `pybw build ` to resolve dependencies.")
+        Exception("BW CLI supporting socket serve not found. Try `vaultio build ` to resolve dependencies.")
 
 def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, **kwds):
     if BW_PATH is None:
-        Exception("BW CLI supporting socket serve not found. Try `pybw build` to resolve dependencies.")
+        Exception("BW CLI supporting socket serve not found. Try `vaultio build` to resolve dependencies.")
     kill_process_listening_on_socket(sock_path)
 
     args = [str(CACHE_DIR / "bin" / "bw"), "serve", "--hostname"]
@@ -114,7 +114,7 @@ class Serve:
         if socks is None and host is None and sock_path is None and fd is None:
             if SOCK_SUPPORT:
                 socks = socket.socketpair()
-                # sock_dir = Path.home() / ".cache" / "pybw" / "socket"
+                # sock_dir = Path.home() / ".cache" / "vaultio" / "socket"
                 # sock_path = os.path.join(sock_dir, "serve.sock")
             else:
                 host = "localhost"

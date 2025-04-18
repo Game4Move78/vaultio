@@ -1,19 +1,19 @@
-# This file is part of pybw.
+# This file is part of vaultio.
 #
-# pybw is free software: you can redistribute it and/or modify
+# vaultio is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# pybw is distributed in the hope that it will be useful,
+# vaultio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with pybw.  If not, see <https://www.gnu.org/licenses/>.
+# along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
-from pybw.server import Serve
+from vaultio.server import Serve
 
 def remove_none(value):
     ret = {k: v for k, v in value.items() if v is not None}

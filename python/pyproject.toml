@@ -1,10 +1,27 @@
+# This file is part of pybw.
+#
+# pybw is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# pybw is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with pybw.  If not, see <https://www.gnu.org/licenses/>.
+
+
 [project]
-name = "pybw"
+name = "vaultio"
 version = "0.1.0"
 description = "Unofficial tool for stateless Bitwarden vault management"
 authors = [
     {name = "Patrick Lenihan", email = "patrick@plenihan.com"}
 ]
+license = "GPL-3.0-or-later"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -15,11 +32,11 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "pybw", from = "src"}]
+packages = [{include = "vaultio", from = "src"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.scripts]
-pybw = "pybw.cli:main"
+[project.scripts]
+vaultio = "vaultio.cli:main"

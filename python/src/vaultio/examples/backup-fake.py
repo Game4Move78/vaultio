@@ -1,18 +1,3 @@
-# This file is part of pybw.
-#
-# pybw is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# pybw is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with pybw.  If not, see <https://www.gnu.org/licenses/>.
-
 from csv import Error
 import os
 from pathlib import Path
@@ -24,10 +9,6 @@ from rich.panel import Panel
 from rich.table import Table
 
 from pybw.client import Client
-
-from faker import Faker
-
-faker = Faker()
 
 def iter_items(client):
     folder_map = {f["id"]: f["name"] for f in client.list(type="folder")}
@@ -53,13 +34,13 @@ def backup_value(entry_path, entry, value_path):
         pass_insert(entry_path / value_path, value.encode())
 
 def backup_attachments(client, display, item_path, item):
-
     for attachment in item.get("attachments", ()):
         attachment_path = item_path / "attachments" / attachment["fileName"]
         pass_insert(attachment_path, client.get_attachment(attachment["id"], item["id"]))
         display.add_backup_attachment(attachment["fileName"], attachment["id"])
 
-def counts(entries):
+def name_counts(entries):
+    '''Count the occurrences of .name'''
     cts = {}
     for entry in entries:
         if entry["name"] in cts:
@@ -69,10 +50,11 @@ def counts(entries):
     return cts
 
 def backup_fields(item_path, item):
+
     if item.get("fields") is None:
         return
 
-    cts = counts(item["fields"])
+    cts = name_counts(item["fields"])
 
     for field in item["fields"]:
 
@@ -84,8 +66,7 @@ def backup_fields(item_path, item):
 
         pass_insert(field_path, field["value"].encode())
 
-def backup(client, display, item_path, item):
-
+def backup_item(client, display, item_path, item):
     backup_value(item_path, item, "id")
     backup_value(item_path, item, "login/username")
     backup_value(item_path, item, "login/password")
@@ -101,14 +82,10 @@ class Display:
         self.attachments = []  # List of (filename, uuid)
 
     def add_backup_item(self, name, uuid):
-        name = faker.url()
-        uuid = faker.uuid4()
         self.items.append((name, uuid))
         self.items = self.items[-5:]
 
     def add_backup_attachment(self, fn, uuid):
-        fn = faker.file_name()
-        uuid = faker.password(length=32, special_chars=False, upper_case=False)
         self.attachments.append((fn, uuid))
         self.attachments = self.attachments[-5:]
 
@@ -154,15 +131,18 @@ def main():
         client.unlock()
 
         items = list(iter_items(client))
-        cts = counts(item for _, item in items)
+        cts = name_counts(item for _, item in items)
         total = len(items)
 
         for idx, (item_path, item) in enumerate(items):
 
             if cts[item["name"]] != 1:
+                # Skip duplicates
                 continue
 
-            backup(client, display, Path("bitwarden") / item_path, item)
+            backup_item(client, display, Path("bitwarden") / item_path, item)
+
+            # Update display
             display.add_backup_item(item["name"], item["id"])
             display.update(total, idx)
 

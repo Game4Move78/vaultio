@@ -2,19 +2,25 @@
 
 ## Overview
 
-**`pybw`** is an **unofficial Python API** for managing Bitwarden vaults via the Bitwarden CLI. Instead of launching a new CLI process for each operation, it runs the CLI once in the background and communicates with it through a **private socket connection**. This improves performance and provides a secure method for using the [serve API](https://bitwarden.com/help/vault-management-api/).
+**`vaultio`** is an **unofficial Python API** for managing Bitwarden vaults via the Bitwarden CLI. Instead of launching a new CLI process for each operation, it runs the CLI once in the background and communicates with it through a **private socket connection**. This improves performance and provides a secure method for using the [serve API](https://bitwarden.com/help/vault-management-api/) to build tools and scripts.
 
 ## How It Works
 
-The API is built around the stateful Express web server launched by the [`bw serve`](https://bitwarden.com/help/cli/#serve) command. This server exposes a local REST API for performing vault actions. `pybw` wraps this API internally and delegates all actions to the Bitwarden CLI.
+The API is built around the stateful Express web server launched by the [`bw serve`](https://bitwarden.com/help/cli/#serve) command. This server exposes a local REST API for performing vault actions. `vaultio` wraps this API internally and delegates all actions to the Bitwarden CLI.
 
-> **Note:** `pybw` does **not cache or store credentials**. All requests are proxied directly to the background process.
+> **Note:** `vaultio` does **not cache or store credentials**. All requests are proxied directly to the background process.
 
 ---
 
 ## Installation
 
-### 🔧 Basic Setup
+### 📦 Pip
+
+```sh
+pip install vaultio
+```
+
+### 🔧 Repo
 
 ```sh
 cd python
@@ -37,7 +43,7 @@ You can either:
 - Run:
 
 ```sh
-pybw build
+vaultio build
 ```
 
 This installs the CLI from the official NPM package [`@bitwarden/cli`](https://www.npmjs.com/package/@bitwarden/cli).
@@ -50,13 +56,13 @@ To enable this:
 - **Manually build** from the fork: [Game4Move78/clients](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) and copy the binary to:
 
 ```sh
-$HOME/.cache/pybw/bin/bw
+$HOME/.cache/vaultio/bin/bw
 ```
 
-- **Or**, let `pybw` handle it for you:
+- **Or**, let `vaultio` handle it for you:
 
 ```sh
-pybw --unofficial
+vaultio --unofficial
 ```
 
 This will clone the repo and build it locally. (No pre-built binaries are currently provided.)
@@ -67,18 +73,18 @@ This will clone the repo and build it locally. (No pre-built binaries are curren
 
 ### 📘 API Documentation
 
-See the full [API reference](https://github.com/Game4Move78/pybw/blob/master/API.md).
+See the full [API reference](https://github.com/Game4Move78/vaultio/blob/master/API.md).
 
 ### 📟 CLI Wrapper
 
 ```sh
-pybw --help
+vaultio --help
 ```
 
 ### 🧪 Example: Check Status and List Items
 
 ```python
-from pybw.client import Client
+from vaultio.client import Client
 
 with Client() as client:
     print(client.status())
@@ -94,9 +100,9 @@ with Client() as client:
 
 ### 🔍 More Examples
 
-- [Creating a CLI](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py)
-- [Creating a shell](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/shell.py)
-- [Backing up vault to Unix pass](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/backup.py)
+- [Creating a CLI](https://github.com/Game4Move78/vaultio/blob/master/python/src/vaultio/cli.py)
+- [Creating a shell](https://github.com/Game4Move78/vaultio/blob/master/python/src/vaultio/examples/shell.py)
+- [Backing up vault to Unix pass](https://github.com/Game4Move78/vaultio/blob/master/python/src/vaultio/examples/backup.py)
 
 ---
 
