@@ -47,9 +47,9 @@ with Client() as client:
 
 ### More examples
 
--[Creating a CLI](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py)
+- [Creating a CLI](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py)
 - [Creating a shell](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/shell.py)
--[Backing up vault to Unix pass](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/backup.py)
+- [Backing up vault to Unix pass](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/backup.py)
 
 ## Does it support HTTPS?
 
