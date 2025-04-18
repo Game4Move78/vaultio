@@ -76,7 +76,7 @@ def backup_fields(item_path, item):
             # print(f"Ignored field {field_path}")
             continue
 
-        pass_insert(field_path, field["value"].encode())
+        pass_insert(field_path, field["value"].encode("utf-8"))
 
 def backup(client, display, item_path, item):
 
