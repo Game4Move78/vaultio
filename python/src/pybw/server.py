@@ -30,6 +30,12 @@ class HttpResponse:
         self.headers = headers
         self.chunks = chunks
 
+    def bytes(self, check=False):
+        if check: self.check()
+        return b"".join(
+            chunk for chunk in self.chunks
+        )
+
     def content(self, check=False):
         if check: self.check()
         return "".join(
@@ -81,7 +87,9 @@ def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, **kwds):
 
     return subprocess.Popen(
         args,
-        **kwds
+        **kwds,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
     )
 
 class Serve:
@@ -326,7 +334,7 @@ class Serve:
         status, reason, headers = next(chunks)
         return HttpResponse(status, reason, headers, chunks)
 
-    def request_text(self, endpoint, method, headers=None, value=None, params=None):
+    def request_bytes(self, endpoint, method, headers=None, value=None, params=None):
         if value is None:
             body = None
             content_length = None
@@ -336,7 +344,11 @@ class Serve:
             content_length = len(value)
         content_type="application/json"
         resp = self.request(endpoint, method, headers, body, content_type, params, content_length)
-        return resp.content(check=True)
+        return resp.bytes(check=True)
+
+    def request_text(self, endpoint, method, headers=None, value=None, params=None):
+        chunks = self.request_bytes(endpoint, method, headers, value, params)
+        return chunks.decode()
 
     def request_json(self, endpoint, method, headers=None, value=None, params=None, text=False):
         text = self.request_text(endpoint, method, headers, value, params)
