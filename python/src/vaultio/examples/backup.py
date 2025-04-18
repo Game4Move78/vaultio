@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
-from csv import Error
-import os
 from pathlib import Path
 import subprocess
 
@@ -24,10 +22,6 @@ from rich.panel import Panel
 from rich.table import Table
 
 from vaultio.client import Client
-
-from faker import Faker
-
-faker = Faker()
 
 def iter_items(client):
     folder_map = {f["id"]: f["name"] for f in client.list(type="folder")}
@@ -101,14 +95,10 @@ class Display:
         self.attachments = []  # List of (filename, uuid)
 
     def add_backup_item(self, name, uuid):
-        name = faker.url()
-        uuid = faker.uuid4()
         self.items.append((name, uuid))
         self.items = self.items[-5:]
 
     def add_backup_attachment(self, fn, uuid):
-        fn = faker.file_name()
-        uuid = faker.password(length=32, special_chars=False, upper_case=False)
         self.attachments.append((fn, uuid))
         self.attachments = self.attachments[-5:]
 
