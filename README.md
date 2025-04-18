@@ -1,12 +1,20 @@
 # Python API for Bitwarden Vault Management
 
-## Description
-This an unofficial Python API for Bitwarden Vault Management using the Bitwarden CLI. Rather than launching the CLI app repeatedly for every action, it launches the CLI once in a background process and invokes actions through a private socket connection.
+## Overview
 
-## Implementation
-The implementation is built around the stateful express web server launched by the [serve](https://bitwarden.com/help/cli/#serve) command, which deploys a local REST API for performing CLI actions. `pybw` uses this API internally, relying on the Bitwarden CLI for all actions. It never caches any credentials that are served and simply passes requests onto the Bitwarden background process and returns the results.
+**`pybw`** is an **unofficial Python API** for managing Bitwarden vaults via the Bitwarden CLI. Instead of launching a new CLI process for each operation, it runs the CLI once in the background and communicates with it through a **private socket connection**. This improves performance and avoids redundant unlocks.
 
-## Basic install
+## How It Works
+
+The API is built around the stateful Express web server launched by the [`bw serve`](https://bitwarden.com/help/cli/#serve) command. This server exposes a local REST API for performing vault actions. `pybw` wraps this API internally and delegates all actions to the Bitwarden CLI.
+
+> **Note:** `pybw` does **not cache or store credentials**. All requests are proxied directly to the background process.
+
+---
+
+## Installation
+
+### 🔧 Basic Setup
 
 ```sh
 cd python
@@ -16,45 +24,82 @@ pip install poetry
 poetry install
 ```
 
-## Installing official Bitwarden CLI
-Currently the serve API is only exposed through HTTP over a TCP port. This makes setting permissions difficult, as you have to manually set up a firewall to stop other apps and users from being able to interact with the unlocked vault. To use the official CLI either have `bw` available on your PATH or you can run `pybw build` to install it from the official NPM package `@bitwarden/cli`.
+---
 
-## Installing unofficial fork adding socket support
-I have made a [PR](https://github.com/bitwarden/clients/pull/14262) that makes a small external change to `bw serve` so that it can serve over various types of socket connections. This means that requests can not be seen by other users and processes and will be sent to the process directly over a socket connection rather than passing through the network stack unencrypted. The changes are minor and the diff can be reviewed [here](https://github.com/bitwarden/clients/pull/14262/files).
+## Installing the Bitwarden CLI
 
-To enable this functionality currently you have to either build from source using [fork](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) and copy the binary to `$HOME/.cache/pybw/bin/bw`. Alternatively you can run `pybw --unofficial` and it will build clone the repo and build from source for you. Currently there is no pre-packaged binaries.
+### Option 1: Official CLI
+
+By default, `bw serve` exposes its API via **HTTP over TCP**, which can be less secure since other users or apps might access the unlocked vault without proper firewall rules.
+
+You can either:
+- Ensure `bw` is available in your `PATH`, or
+- Run:
+
+```sh
+pybw build
+```
+
+This installs the CLI from the official NPM package [`@bitwarden/cli`](https://www.npmjs.com/package/@bitwarden/cli).
+
+### Option 2: Unofficial Fork with Socket Support
+
+A [pull request](https://github.com/bitwarden/clients/pull/14262) introduces support for **Unix sockets** and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security.
+
+To enable this:
+- **Manually build** from the fork: [Game4Move78/clients](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) and copy the binary to:
+
+```sh
+$HOME/.cache/pybw/bin/bw
+```
+
+- **Or**, let `pybw` handle it for you:
+
+```sh
+pybw --unofficial
+```
+
+This will clone the repo and build it locally. (No pre-built binaries are currently provided.)
+
+---
 
 ## Usage
 
-### API
+### 📘 API Documentation
 
-[Documentation](https://github.com/Game4Move78/pybw/blob/master/API.md)
+See the full [API reference](https://github.com/Game4Move78/pybw/blob/master/API.md).
 
-### CLI wrapper
+### 📟 CLI Wrapper
 
-```shell
+```sh
 pybw --help
 ```
 
-### Print status and names for items and folders
+### 🧪 Example: Check Status and List Items
 
 ```python
+from pybw.client import Client
+
 with Client() as client:
-    print(client.status()) # asks for status
+    print(client.status())
     print(client.unlock())
     print(client.status())
+
     for item in client.list():
         print(item["name"])
+
     for folder in client.list(type="folder"):
-        print(item["name"])
+        print(folder["name"])
 ```
 
-### More examples
+### 🔍 More Examples
 
 - [Creating a CLI](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/cli.py)
 - [Creating a shell](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/shell.py)
 - [Backing up vault to Unix pass](https://github.com/Game4Move78/pybw/blob/master/python/src/pybw/examples/backup.py)
 
-## Does it support HTTPS?
+---
 
-Not supported, but its possible using [caddy](https://github.com/Game4Move78/bw-serve-encrypted).
+## 🔐 HTTPS Support
+
+Not currently supported directly, but it's possible using [Caddy](https://github.com/Game4Move78/bw-serve-encrypted).
