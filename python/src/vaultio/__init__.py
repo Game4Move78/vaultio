@@ -1,2 +1,2 @@
-from .build import build
-from .client import Client
+from .scripts.build import build
+from .vault import Vault

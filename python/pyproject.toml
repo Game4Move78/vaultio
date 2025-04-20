@@ -16,7 +16,7 @@
 
 [project]
 name = "vaultio"
-version = "0.1.101"
+version = "0.1.201"
 description = "Unofficial tool for stateless Bitwarden vault management"
 authors = [
     {name = "Patrick Lenihan", email = "patrick@plenihan.com"}
@@ -39,4 +39,4 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
-vaultio = "vaultio.cli:main"
+vaultio = "vaultio.scripts.cli:main"

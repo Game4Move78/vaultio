@@ -1,13 +1,15 @@
-# Client API
+# Vault API
 
-This `Client` class provides a Python interface for interacting with Bitwarden CLI serve. It wraps JSON-based API endpoints for various operations, such as user authentication, item management, syncing, and attachment handling.
+This `Vault` class provides a Python interface for interacting with Bitwarden CLI serve. It wraps JSON-based API endpoints for various operations, such as user authentication, item management, syncing, and attachment handling.
 
 ---
 
 ## Initialization
 
 ```python
-client = Client(host="127.0.0.1", port=8087)
+from vaultio.vault import Vault
+# from vaultio.vault import VaultCLI
+client = Vault(host="127.0.0.1", port=8087)
 ```
 
 **Parameters:**
@@ -25,7 +27,7 @@ client = Client(host="127.0.0.1", port=8087)
 ## Context Manager Support
 
 ```python
-with Client(...) as client:
+with Vault(...) as client:
     ...
 ```
 - Automatically starts and stops the underlying server connection.

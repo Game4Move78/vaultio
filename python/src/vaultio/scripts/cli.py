@@ -17,12 +17,11 @@
 import os
 from pathlib import Path
 import fire
-from vaultio.build import build
-from vaultio.client import Client
-from vaultio.server import HttpResponse, HttpResponseError
+from vaultio.scripts.build import build
+from vaultio.vault import Vault, HttpResponseError
 from vaultio.util import SOCK_SUPPORT
 
-class CLI(Client):
+class CLI(Vault):
 
     def __init__(self) -> None:
         if SOCK_SUPPORT:

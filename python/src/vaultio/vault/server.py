@@ -21,10 +21,9 @@ import re
 import shutil
 import socket
 import subprocess
-from pathlib import Path
 import time
 from email.utils import encode_rfc2231
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode
 
 from vaultio.util import BW_PATH, CACHE_DIR, SOCK_SUPPORT, kill_process_listening_on_socket
 
@@ -74,12 +73,15 @@ def require_bw_socks():
     if SOCK_SUPPORT is None:
         raise Exception("BW CLI supporting socket serve not found. Try `vaultio build ` to resolve dependencies.")
 
-def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, **kwds):
+def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, bw_path=None, **kwds):
     if BW_PATH is None:
         raise Exception("BW CLI supporting socket serve not found. Try `vaultio build` to resolve dependencies.")
     kill_process_listening_on_socket(sock_path)
 
-    args = [str(CACHE_DIR / "bin" / "bw"), "serve", "--hostname"]
+    if bw_path is None:
+        bw_path = BW_PATH
+
+    args = [bw_path, "serve", "--hostname"]
 
     if socks is not None:
         require_bw_socks()
@@ -107,9 +109,9 @@ def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, **kwds):
         stderr=subprocess.DEVNULL
     )
 
-class Serve:
+class Server:
 
-    def __init__(self, socks=None, host=None, port=None, sock_path=None, fd=None, send_sz=4096, recv_sz=4096, serve=True, wait=True):
+    def __init__(self, socks=None, host=None, port=None, sock_path=None, fd=None, send_sz=4096, recv_sz=4096, serve=True, wait=True, bw_path=None):
 
         if socks is None and host is None and sock_path is None and fd is None:
             if SOCK_SUPPORT:
@@ -124,6 +126,7 @@ class Serve:
         self.host = host
         self.port = port
         self.sock_path = sock_path
+
         self.fd = fd
 
         self.send_sz = send_sz
@@ -131,13 +134,17 @@ class Serve:
         self.serve = serve
         self.wait = wait
 
+        self.bw_path = bw_path
+
         self.proc = None
         self.start()
+
+        self.bw_path = bw_path
 
     def serve_socket(self):
         if self.sock_path and os.path.exists(self.sock_path):
             os.unlink(self.sock_path)
-        self.proc = bw_serve(self.socks, self.host, self.port, self.sock_path, self.fd)
+        self.proc = bw_serve(self.socks, self.host, self.port, self.sock_path, self.fd, self.bw_path)
         return self.proc
 
     def start(self):

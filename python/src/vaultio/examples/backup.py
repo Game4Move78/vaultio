@@ -21,12 +21,13 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 
-from vaultio.client import Client
+from src.vaultio.vault import Vault
+from vaultio import Vault
 
-def iter_items(client):
-    folder_map = {f["id"]: f["name"] for f in client.list(type="folder")}
+def iter_items(vault):
+    folder_map = {f["id"]: f["name"] for f in vault.list(type="folder")}
 
-    for item in client.list():
+    for item in vault.list():
         path = Path(folder_map[item["folderId"]]) / item["name"]
         yield path, item
 
@@ -46,11 +47,11 @@ def backup_value(entry_path, entry, value_path):
     if value is not None:
         pass_insert(entry_path / value_path, value.encode("utf-8"))
 
-def backup_attachments(client, display, item_path, item):
+def backup_attachments(vault, display, item_path, item):
 
     for attachment in item.get("attachments", ()):
         attachment_path = item_path / "attachments" / attachment["fileName"]
-        pass_insert(attachment_path, client.get_attachment(attachment["id"], item["id"]))
+        pass_insert(attachment_path, vault.get_attachment(attachment["id"], item["id"]))
         display.add_backup_attachment(attachment["fileName"], attachment["id"])
 
 def counts(entries):
@@ -78,14 +79,14 @@ def backup_fields(item_path, item):
 
         pass_insert(field_path, field["value"].encode("utf-8"))
 
-def backup(client, display, item_path, item):
+def backup(vault, display, item_path, item):
 
     backup_value(item_path, item, "id")
     backup_value(item_path, item, "login/username")
     backup_value(item_path, item, "login/password")
     backup_value(item_path, item, "notes")
     backup_fields(item_path, item)
-    backup_attachments(client, display, item_path, item)
+    backup_attachments(vault, display, item_path, item)
 
 class Display:
 
@@ -139,11 +140,11 @@ class Display:
         self.live.update(layout)
 
 def main():
-    with Client() as client, Live(refresh_per_second=30) as live:
+    with Vault() as vault, Live(refresh_per_second=30) as live:
         display = Display(live)
-        client.unlock()
+        vault.unlock()
 
-        items = list(iter_items(client))
+        items = list(iter_items(vault))
         cts = counts(item for _, item in items)
         total = len(items)
 
@@ -152,7 +153,7 @@ def main():
             if cts[item["name"]] != 1:
                 continue
 
-            backup(client, display, Path("bitwarden") / item_path, item)
+            backup(vault, display, Path("bitwarden") / item_path, item)
             display.add_backup_item(item["name"], item["id"])
             display.update(total, idx)
 
