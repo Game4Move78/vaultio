@@ -15,8 +15,10 @@
 
 import cmd
 from socket import socketpair
-from pybw import Client, build
-from pybw.server import HttpResponseError
+
+from vaultio.scripts.build import build
+from vaultio.vault.server import HttpResponseError
+from vaultio.vault import Vault
 
 def safe_cmd(func):
     def wrapper(self, arg):
@@ -30,43 +32,44 @@ class Shell(cmd.Cmd):
     intro = "Welcome to the pybw shell. Type help or ? to list commands.\n"
     prompt = "(pybw) "
 
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.client = Client(**kwargs)
-        self.client.__enter__()
+    def __init__(self, socks=None, host=None, port=None, sock_path=None, fd=None, serve=True, wait=True, bw_path=None, allow_write=True) -> None:
+        self.vault = Vault(socks=socks, host=host, port=port, sock_path=sock_path, fd=fd, serve=serve, wait=wait, bw_path=bw_path)
+        self.vault.serve()
 
     def do_build(self, unofficial=False):
         """Build bw cli: build"""
-        build(official)
-
-    @safe_cmd
-    def do_unlock(self, arg):
-        """Unlock the vault: unlock"""
-        result = self.client.unlock()
-        print("Unlocked" if result else "Failed to unlock")
+        build(unofficial)
 
     @safe_cmd
     def do_lock(self, arg):
         """Lock the vault: lock"""
-        success = self.client.lock()
+        success = self.vault.lock()
         print("Locked" if success else "Failed to lock")
+
+    @safe_cmd
+    def do_unlock(self, arg):
+        """Unlock the vault: unlock"""
+        result = self.vault.unlock()
+        print("Unlocked" if result else "Failed to unlock")
 
     @safe_cmd
     def do_list(self, arg):
         """List items: list"""
-        items = self.client.list()
+        items = self.vault.list()
+        if items is None:
+            return None
         for item in items:
             print(item)
 
     @safe_cmd
     def do_generate(self, arg):
         """Generate a password: generate"""
-        print(self.client.generate())
+        print(self.vault.generate())
 
     @safe_cmd
     def do_status(self, arg):
         """Show vault status: status"""
-        print(self.client.status())
+        print(self.vault.status())
 
     @safe_cmd
     def do_exit(self, arg):
@@ -80,7 +83,7 @@ class Shell(cmd.Cmd):
 
     @safe_cmd
     def _exit(self):
-        self.client.__exit__(None, None, None)
+        self.vault.close()
         return True
 
 if __name__ == '__main__':
