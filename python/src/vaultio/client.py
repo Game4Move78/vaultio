@@ -112,8 +112,9 @@ class Client:
 
     NEW_TYPES = {
         "item",
+        "send",
         "folder",
-        # ...
+        "org-collection",
     }
 
     def new(self, item, type="item"):
@@ -123,6 +124,13 @@ class Client:
         value = self._serve.request_json(f"/object/{type}", "GET", value=item)
         return value["data"] if value["success"] else None
 
+    EDIT_TYPES = {
+        "item",
+        "send",
+        "folder",
+        "org-collection",
+    }
+
     def edit(self, value, type="item"):
         assert self.allow_write
         if type == "send":
@@ -130,6 +138,13 @@ class Client:
         uuid = value["uuid"]
         value = self._serve.request_json(f"/object/{type}/{uuid}", "PUT", value=value)
         return value["data"] if value["success"] else None
+
+    DELETE_TYPES = {
+        "item",
+        "send",
+        "folder",
+        "org-collection",
+    }
 
     def delete(self, uuid, type="item"):
         assert self.allow_write
@@ -140,6 +155,15 @@ class Client:
         assert self.allow_write
         value = self._serve.request_json(f"/restore/item/{uuid}", "POST")
         return value["success"]
+
+    LIST_TYPES = {
+        "item",
+        "folder",
+        "collections",
+        "org-members",
+        "organizations",
+        "org-collections",
+    }
 
     def list(self, organization_id=None, collection_id=None, folder_id=None, url=None, trash=None, search=None, type="item"):
         if type.rstrip("s") == "item":
@@ -185,3 +209,7 @@ class Client:
         else:
             value = self._serve.request_json(f"/device-approval/{organization_id}/deny/{request_id}", "POST")
         return value["success"]
+
+class ClientType(Client):
+
+    def __init__(self, client):
