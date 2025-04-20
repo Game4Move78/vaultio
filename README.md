@@ -110,6 +110,10 @@ with Client() as client:
 
 Not currently supported directly, but it's possible using [Caddy](https://github.com/Game4Move78/bw-serve-encrypted).
 
+## Related
+
+- [`PyWarden`](https://github.com/stefanfluit/PyWarden) is a Python Bitwarden CLI wrapper
+
 ## Disclaimer
 
 This project is not associated with [https://bitwarden.com/](Bitwarden) or Bitwarden, Inc. These contributions are independent of Bitwarden and are reviewed by other maintainers.
