@@ -51,7 +51,6 @@ def build_nodeenv():
             return
     log_download("⬇️  Installing Node and npm into the virtualenv...")
     subprocess.run(
-        # ["nodeenv", "-p", str(venv), "-n", "20.18.0", "--npm", "none"],
         ["nodeenv", "-p", "-n", "20.18.0", "--npm", "none"],
         check=True,
         text=True,
@@ -66,9 +65,10 @@ def clone_bw():
         return root_dir, cli_dir
 
     repo_url = "https://github.com/Game4Move78/clients"
+    repo_branch = "vaultio"
 
     log_clone(f"Cloning Bitwarden CLI from {repo_url}")
-    subprocess.run(["git", "clone", repo_url, str(root_dir), "--depth", "1", "--single-branch", "--branch", "feat/unix-socket-support"], check=True)
+    subprocess.run(["git", "clone", repo_url, str(root_dir), "--depth", "1", "--single-branch", "--branch", repo_branch], check=True)
 
     assert root_dir.exists()
     assert cli_dir.exists()

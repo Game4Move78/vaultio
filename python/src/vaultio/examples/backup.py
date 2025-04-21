@@ -21,7 +21,6 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 
-from src.vaultio.vault import Vault
 from vaultio import Vault
 
 def iter_items(vault):

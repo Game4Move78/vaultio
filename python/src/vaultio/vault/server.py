@@ -17,6 +17,7 @@ import itertools
 import json
 import mimetypes
 import os
+from pathlib import Path
 import re
 import shutil
 import socket
@@ -109,15 +110,19 @@ def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, bw_path=
         stderr=subprocess.DEVNULL
     )
 
+SOCKETPAIR_DEFAULT = True
+
 class Server:
 
     def __init__(self, socks=None, host=None, port=None, sock_path=None, fd=None, send_sz=4096, recv_sz=4096, serve=True, wait=True, bw_path=None):
 
         if socks is None and host is None and sock_path is None and fd is None:
             if SOCK_SUPPORT:
-                socks = socket.socketpair()
-                # sock_dir = Path.home() / ".cache" / "vaultio" / "socket"
-                # sock_path = os.path.join(sock_dir, "serve.sock")
+                if SOCKETPAIR_DEFAULT:
+                    socks = socket.socketpair()
+                else:
+                    sock_dir = Path.home() / ".cache" / "vaultio" / "socket"
+                    sock_path = os.path.join(sock_dir, "serve.sock")
             else:
                 host = "localhost"
                 port = int(8087)
