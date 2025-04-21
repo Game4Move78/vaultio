@@ -61,8 +61,9 @@ def clone_bw():
     root_dir = CACHE_DIR / "clients"
     cli_dir = root_dir / "apps" / "cli"
 
-    if root_dir.exists() and cli_dir.exists():
-        return root_dir, cli_dir
+    if root_dir.exists():
+        log_info(f"Cleaning up {root_dir}")
+        shutil.rmtree(root_dir)
 
     repo_url = "https://github.com/Game4Move78/clients"
     repo_branch = "vaultio"
