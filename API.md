@@ -1,6 +1,6 @@
 # Vault API
 
-This `Vault` class provides a Python interface for interacting with Bitwarden CLI serve. It wraps JSON-based API endpoints for various operations, such as user authentication, item management, syncing, and attachment handling.
+This `Vault` class provides a Python interface for interacting with Bitwarden CLI serve. It wraps JSON-based API endpoints for various operations, such as user authentication, item management, syncing, and attachment handling. For a interface that invokes the CLI directly without the serve API use `vaultio.vault.VaultCLI`.
 
 ---
 

@@ -65,7 +65,7 @@ $HOME/.cache/vaultio/bin/bw
 vaultio --unofficial
 ```
 
-This will clone the repo and build it locally. (No pre-built binaries are currently provided.)
+This will clone the repo and build it locally. Then it will show you a diff against the [official repo](https://github.com/bitwarden/clients) before prompting you to continue.
 
 ---
 

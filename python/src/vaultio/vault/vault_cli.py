@@ -32,14 +32,14 @@ def json_value(value):
 
 class VaultCLI:
 
-    def __init__(self, bw_path=None, allow_write=True) -> None:
+    def __init__(self, bw_path=None, allow_write=True, bw_session=None) -> None:
 
         if bw_path is None:
             self.bw_path = str(BW_PATH)
         else:
             self.bw_path = bw_path
 
-        self.bw_session = None
+        self.bw_session = bw_session
 
         self.allow_write = allow_write
 
