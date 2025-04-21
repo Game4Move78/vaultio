@@ -50,10 +50,10 @@ This installs the CLI from the official NPM package [`@bitwarden/cli`](https://w
 
 ### Option 2: Unofficial Fork with Socket Support
 
-I made a [pull request](https://github.com/bitwarden/clients/pull/14262) that introduces support for Unix sockets and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security.
+I made a [pull request](https://github.com/bitwarden/vaults/pull/14262) that introduces support for Unix sockets and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security.
 
 To enable this:
-- **Manually build** from the fork: [Game4Move78/clients](https://github.com/Game4Move78/clients/tree/feat/unix-socket-support) and copy the binary to:
+- **Manually build** from the fork: [Game4Move78/vaults#vaultio](https://github.com/Game4Move78/vaults/tree/feat/vaultio) and copy the binary to:
 
 ```sh
 $HOME/.cache/vaultio/bin/bw
@@ -65,7 +65,7 @@ $HOME/.cache/vaultio/bin/bw
 vaultio --unofficial
 ```
 
-This will clone the repo and build it locally. Then it will show you a diff against the [official repo](https://github.com/bitwarden/clients) before prompting you to continue.
+This will clone the repo and build it locally. Then it will show you a diff against the [official repo](https://github.com/bitwarden/vaults) before prompting you to continue.
 
 ---
 
@@ -84,17 +84,17 @@ vaultio --help
 ### 🧪 Example: Check Status and List Items
 
 ```python
-from vaultio.client import Client
+from vaultio.vault import Vault
 
-with Client() as client:
-    print(client.status())
-    print(client.unlock())
-    print(client.status())
+with Vault() as vault:
+    print(vault.status())
+    print(vault.unlock())
+    print(vault.status())
 
-    for item in client.list():
+    for item in vault.list():
         print(item["name"])
 
-    for folder in client.list(type="folder"):
+    for folder in vault.list(type="folder"):
         print(folder["name"])
 ```
 
