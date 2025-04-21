@@ -44,18 +44,26 @@ def log_move(msg):
     console.log(f":package: [yellow]{escape(msg)}[/yellow]")
 
 def build_nodeenv():
+    node_path = shutil.which("node")
+    if node_path is not None:
+        version = subprocess.run([node_path, "--version"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False).stdout
+        if version.decode("utf-8").strip() == "v20.18.0":
+            return
     log_download("⬇️  Installing Node and npm into the virtualenv...")
     subprocess.run(
         # ["nodeenv", "-p", str(venv), "-n", "20.18.0", "--npm", "none"],
         ["nodeenv", "-p", "-n", "20.18.0", "--npm", "none"],
-        check=False,
-        text=True
+        check=True,
+        text=True,
     )
 
 def clone_bw():
 
     root_dir = CACHE_DIR / "clients"
     cli_dir = root_dir / "apps" / "cli"
+
+    if root_dir.exists() and cli_dir.exists():
+        return root_dir, cli_dir
 
     repo_url = "https://github.com/Game4Move78/clients"
 
@@ -103,11 +111,11 @@ def build_bw():
     subprocess.run(["npm", "run", "build:oss:prod", "-w", "@bitwarden/cli"], cwd=root_dir, check=True)
     subprocess.run(["npm", "run", PACKAGE_SCRIPT, "-w", "@bitwarden/cli"], cwd=root_dir, check=True)
 
-    if (cli_dir / BW_PATH).exists():
-        print(f"{(cli_dir / BW_PATH)} exists. Removing...")
-        shutil.rmtree(root_dir)
     log_move(f"Moving {BW_PATH} from {cli_dir} into {CACHE_DIR}")
-    shutil.move(cli_dir / BW_PATH, CACHE_DIR / "bin")
+    src = cli_dir / BW_PATH
+    dst = CACHE_DIR / "bin" / "bw"
+    dst.unlink(missing_ok=True)
+    shutil.move(src, dst)
 
     log_info(f"Cleaning up {root_dir}")
 
