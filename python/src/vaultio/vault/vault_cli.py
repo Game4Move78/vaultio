@@ -16,7 +16,8 @@
 import json
 import os
 import subprocess
-from vaultio.util import BW_PATH, password_input, remove_none
+from vaultio.util import BW_PATH, InputError, password_input, remove_none
+from rich.prompt import Prompt
 
 def cli_params(params):
     if params is None:
@@ -32,7 +33,7 @@ def json_value(value):
 
 class VaultCLI:
 
-    def __init__(self, bw_path=None, allow_write=True, bw_session=None) -> None:
+    def __init__(self, bw_path=None, allow_write=True, bw_session=None, dry_run=False) -> None:
 
         if bw_path is None:
             self.bw_path = str(BW_PATH)
@@ -43,12 +44,27 @@ class VaultCLI:
 
         self.allow_write = allow_write
 
+        self.dry_run = dry_run
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         # self.bw_path = None
         pass
+
+    def dry_run_prompt(self, cmd):
+        if not self.dry_run:
+            return True
+
+        resp = Prompt.ask(
+            f"Executing `{cmd}`. Proceed?",
+            choices=["y", "n"],
+            default="n",
+            show_choices=True
+        ).strip().lower()
+
+        return resp.strip().lower()[:1] == "y"
 
     def run(self, *args, params=None, input=None, stdin=None, stdout=None, **kwds):
 
@@ -70,9 +86,10 @@ class VaultCLI:
             env["BW_SESSION"] = self.bw_session
         env |= {k.upper(): v for k, v in kwds.items()}
 
-        res = subprocess.run(cmd, env=env, stdout=stdout, stderr=subprocess.DEVNULL, input=input, stdin=stdin)
-
-        return res
+        if self.dry_run_prompt(" ".join(cmd)):
+            return subprocess.run(cmd, env=env, stdout=stdout, stderr=subprocess.DEVNULL, input=input, stdin=stdin)
+        else:
+            raise InputError(" ".join(cmd))
 
     def run_quiet(self, *args, params=None, input=None, **kwds):
         return self.run("--quiet", *args, params=params, input=input, **kwds).returncode == 0
