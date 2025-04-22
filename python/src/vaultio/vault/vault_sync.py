@@ -33,10 +33,9 @@ class VaultSync:
         else:
             encrypted = None
 
-        if password is None:
-            password = password_input()
-
         if encrypted is None:
+            if password is None:
+                password = password_input()
             encrypted = download_sync(email, password, provider_choice, provider_token)
             if cache is not None:
                 with open(cache, "w") as fout:
