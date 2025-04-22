@@ -14,6 +14,7 @@
 # along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
 import base64
+import copy
 from csv import Error
 import re
 import sys
@@ -25,6 +26,7 @@ import hashlib
 import os
 from rich.prompt import Prompt
 from vaultio.util import ask_input, choose_input, password_input
+from vaultio.vault.schema import ENCRYPTED_KEYS, INTERNAL_KEYS
 
 from cryptography.hazmat.backends                   import default_backend
 from cryptography.hazmat.primitives                 import ciphers, kdf, hashes, hmac, padding
@@ -354,6 +356,30 @@ def decrypt_ciphertext(ciphertext, secrets) -> bytes:
 
     return check_decrypt(unpadder, decrypted)
 
+def encrypt_ciphertext(plaintext, secrets) -> str:
+
+    iv = os.urandom(16)
+
+    padder = padding.PKCS7(128).padder()
+    padded = padder.update(plaintext) + padder.finalize()
+
+    cipher = Cipher(
+        algorithms.AES(secrets["enc"]),
+        modes.CBC(iv),
+        backend=default_backend()
+    )
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(padded) + encryptor.finalize()
+
+    # Compute HMAC over IV + ciphertext
+    h = hmac.HMAC(secrets["mac"], hashes.SHA256(), backend=default_backend())
+    h.update(iv)
+    h.update(ciphertext)
+    mac = h.finalize()
+
+    b64 = lambda b: base64.b64encode(b).decode("utf-8")
+    return f"2.{b64(iv)}|{b64(ciphertext)}|{b64(mac)}"
+
 def decrypt_rsa(ciphertext, master_enc):
     tokens = ciphertext.split(".")
     check_enc_type(tokens[0], 4)
@@ -382,7 +408,13 @@ def decrypt_object_key(key, secrets):
     enc, mac = key[:32], key[32:]
     return dict(enc=enc, mac=mac)
 
-def decrypt_object(root, secrets):
+def new_object_key(secrets):
+    key = os.urandom(64)
+    enc, mac = key[:32], key[32:]
+    key = encrypt_ciphertext(key, secrets)
+    return key, {"enc": enc, "mac": mac}
+
+def decrypt_object(root, secrets, encrypt=False):
     stack = []
     pattern = re.compile(r"\d\.[^,]+\|[^,]+=+")
     node = root
@@ -390,14 +422,22 @@ def decrypt_object(root, secrets):
     while True:
         # print(".".join([str(key) for *_, key in stack]))
         if not isinstance(node, (dict, list)):
+            # path = [key for *_, key in stack]
             encrypted = (isinstance(node, str) and pattern.match(node))
             if len(stack) == 0:
                 return root
             node_secrets, parent, keys, key = stack.pop()
             # print(f"{key} = {node}")
-            if encrypted and key != "key":
-                node = decrypt_ciphertext(node, node_secrets).decode("utf-8")
+            # if encrypted and key != "key":
+            if node is not None and key in ENCRYPTED_KEYS:
+                if encrypt:
+                    assert isinstance(node, str)
+                    node = encrypt_ciphertext(node.encode("utf-8"), node_secrets)
+                else:
+                    node = decrypt_ciphertext(node, node_secrets).decode("utf-8")
                 parent[key] = node
+            else:
+                assert not encrypted or key in INTERNAL_KEYS
             try:
                 key = next(keys)
                 stack.append((node_secrets, parent, keys, key))
@@ -406,7 +446,7 @@ def decrypt_object(root, secrets):
                 node = None
         else:
             if isinstance(node, dict):
-                if node.get("object") == "cipherDetails" and isinstance(node.get("key"), str) and pattern.match(node["key"]):
+                if node.get("object") in ("cipherDetails", "cipher") and isinstance(node.get("key"), str) and pattern.match(node["key"]):
                     node_secrets = decrypt_object_key(node["key"], node_secrets)
                 keys = iter(node.keys())
             else:
@@ -417,6 +457,9 @@ def decrypt_object(root, secrets):
                 node = node[key]
             except StopIteration:
                 node = None
+
+def encrypt_object(root, secrets):
+    return decrypt_object(root, secrets, True)
 
 def download_sync(email=None, password=None, provider_choice=None, provider_token=None):
 
@@ -433,7 +476,18 @@ def download_sync(email=None, password=None, provider_choice=None, provider_toke
     derived_secrets = create_derived_secrets(email, password, kdf_info)
     token = request_access_token(email, derived_secrets, device_id, provider_choice, provider_token)
 
-    sync = request_sync(token["access_token"])
+    sync = request_sync(token)
+
+    sync["ciphers"] = {
+        obj["id"]: obj
+        for obj in sync["ciphers"]
+    }
+
+    sync["folders"] = {
+        obj["id"]: obj
+        for obj in sync["folders"]
+    }
+
     sync_secrets = create_sync_secrets(sync["profile"])
 
     return dict(token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
@@ -454,16 +508,73 @@ def refresh_sync(sync):
 
     sync = request_sync(token)
 
+    sync["ciphers"] = {
+        obj["id"]: obj
+        for obj in sync["ciphers"]
+    }
+
+    sync["folders"] = {
+        obj["id"]: obj
+        for obj in sync["folders"]
+    }
+
     sync_secrets = create_sync_secrets(sync["profile"])
 
     return dict(token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
 
-def decrypt_sync(sync, derived_secrets):
+def create_vault_secrets(sync, password):
+    derived_secrets = create_derived_secrets(sync["email"], password, sync["kdf"])
+    return decrypt_object_key(sync["secrets"]["enc"], derived_secrets)
 
-    vault_secrets = decrypt_object_key(sync["secrets"]["enc"], derived_secrets)
+def decrypt_sync(sync, secrets):
 
-    import copy
-    ciphers = decrypt_object(copy.deepcopy(sync["ciphers"]), vault_secrets)
-    folders = decrypt_object(copy.deepcopy(sync["folders"]), vault_secrets)
+    ciphers = decrypt_object(copy.deepcopy(sync["ciphers"]), secrets)
+    folders = decrypt_object(copy.deepcopy(sync["folders"]), secrets)
 
     return dict(ciphers=ciphers, folders=folders)
+
+def encrypt_sync(sync, secrets):
+
+    ciphers = encrypt_object(copy.deepcopy(sync["ciphers"]), secrets)
+    folders = encrypt_object(copy.deepcopy(sync["folders"]), secrets)
+
+    return dict(ciphers=ciphers, folders=folders)
+
+UPDATE_TYPES = {
+    "cipher",
+    "folder"
+}
+
+def update_request(sync, obj, type, new=False):
+
+    type = type.rstrip("s")
+
+    if type not in UPDATE_TYPES:
+        return
+
+    token = sync["token"]
+
+    token_type = token["token_type"]
+    access_token = token["access_token"]
+
+    headers = {
+        "authorization": f"{token_type} {access_token}",
+        "user-agent": user_agent,
+        "bitwarden-client-name": "cli",
+        "bitwarden-client-version": client_version,
+        "device-type": "8",
+        "Content-Type": "application/json",
+    }
+
+    if new:
+        r = requests.post(f"https://api.bitwarden.com/{type}s", headers=headers, json=obj)
+        if r.status_code == 401:
+            token = refresh_sync(sync)
+            access_token = token["access_token"]
+            resp = requests.post(..., headers={"Authorization": f"Bearer {access_token}"})
+    else:
+        uuid = obj["id"]
+        r = requests.put(f"https://api.bitwarden.com/{type}s/{uuid}", headers=headers, json=obj)
+
+    r.raise_for_status()
+    return r.json()

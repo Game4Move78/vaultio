@@ -18,8 +18,9 @@ import os
 from pathlib import Path
 import subprocess
 
-from vaultio.vault.api import MACError, create_derived_secrets, decrypt_sync, download_sync, refresh_sync
+from vaultio.vault.api import MACError, create_derived_secrets, create_vault_secrets, decrypt_object, decrypt_sync, download_sync, encrypt_ciphertext, encrypt_object, encrypt_sync, new_object_key, refresh_sync, update_request
 from vaultio.util import CACHE_DIR, InputError, password_input
+from vaultio.vault.schema import TEMPLATES, make_cipher
 
 CACHE = CACHE_DIR / "sync.json"
 
@@ -39,10 +40,11 @@ class VaultSync:
             encrypted = download_sync(email, password, provider_choice, provider_token)
             if cache is not None:
                 with open(cache, "w") as fout:
-                    encrypted = json.dump(encrypted, fout)
+                    json.dump(encrypted, fout)
 
         self.encrypted = encrypted
         self.decrypted = None
+        self.secrets = None
 
         self.cache = cache
 
@@ -50,30 +52,50 @@ class VaultSync:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.encrypt(self.secrets)
+        if self.cache is None:
+            return
+        with open(self.cache, "w") as fout:
+            encrypted = json.dump(self.encrypted, fout)
+        # self.decrypted = self.secrets = None
         pass
 
     def lock(self):
+        self.encrypt(self.secrets)
         self.decrypted = None
+        self.secrets = None
         return True
 
-    def decrypt(self, password):
+    def encrypt(self, secrets):
 
-        derived_secrets = create_derived_secrets(self.encrypted["email"], password, self.encrypted["kdf"])
+        if self.decrypted is None:
+            return
 
         try:
-            self.decrypted = decrypt_sync(self.encrypted, derived_secrets)
+            self.encrypted |= encrypt_sync(self.decrypted, secrets)
+        except (InputError, MACError):
+            return False
+
+    def decrypt(self, secrets):
+
+        try:
+            self.decrypted = decrypt_sync(self.encrypted, secrets)
+            self.secrets = secrets
             return True
         except (InputError, MACError):
             return False
 
     def unlock(self, password=None):
+
         if password is None:
             password = password_input()
 
-        self.decrypt(password)
+        secrets = create_vault_secrets(self.encrypted, password)
+
+        return self.decrypt(secrets)
 
     def sync(self):
-        refresh_sync(self.encrypted)
+        self.encrypted = refresh_sync(self.encrypted)
 
     def status(self):
         raise NotImplementedError
@@ -99,24 +121,67 @@ class VaultSync:
         raise NotImplementedError
 
     GET_TYPES = {
+        "totp",
+        "notes",
+        "password",
+        "username",
         "item",
         "folder",
     }
 
     def get(self, uuid, type="item"):
-        raise NotImplementedError
+        assert type in self.GET_TYPES
+        if type == "folder":
+            return self.decrypted["folders"][uuid]
+        else:
+            item = self.decrypted["ciphers"][uuid]
+            if type == "item":
+                return item
+            elif type == "uri":
+                return item["uri"]
+            elif type == "totp":
+                return item["totp"]
+            elif type == "notes":
+                return item["secureNote"]
+            elif type == "username":
+                return item["login"]["username"]
+            elif type == "password":
+                return item["login"]["password"]
 
     NEW_TYPES = {
     }
 
     def new(self, value, type="item"):
-        raise NotImplementedError
+        if type == "item":
+            value = make_cipher(value)
+            value["key"], _ = new_object_key(self.secrets)
+        value = encrypt_object(value, self.secrets)
+        if type == "folder":
+            value = update_request(self.encrypted, value, "folder", new=True)
+        elif type == "item":
+            value = update_request(self.encrypted, value, "cipher", new=True)
+        else:
+            raise NotImplementedError
+        value = decrypt_object(value, self.secrets)
+        return value
 
     EDIT_TYPES = {
+        "folder",
+        "item"
     }
 
     def edit(self, value, type="item"):
-        raise NotImplementedError
+        if type == "folder":
+            value = encrypt_object(value, self.secrets)
+            value = update_request(self.encrypted, value, "folder")
+        elif type == "item":
+            value = make_cipher(value)
+            value = encrypt_object(value, self.secrets)
+            value = update_request(self.encrypted, value, "cipher")
+        else:
+            raise NotImplementedError
+        value = decrypt_object(value, self.secrets)
+        return value
 
     DELETE_TYPES = {
     }
@@ -132,16 +197,11 @@ class VaultSync:
         "folder",
     }
 
-    def iter_ciphers(self, type_id):
-        for cipher in self.decrypted["ciphers"]:
-            if cipher["type"] == type_id:
-                yield cipher
-
     def list(self, type="item"):
         if type.rstrip("s") == "item":
-            return list(self.iter_ciphers(1))
+            return list(self.decrypted["ciphers"].values())
         if type.rstrip("s") == "folder":
-            return list(self.decrypted["folders"])
+            return list(self.decrypted["folders"].values())
         else:
             raise NotImplementedError
 

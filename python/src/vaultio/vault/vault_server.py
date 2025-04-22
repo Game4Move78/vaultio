@@ -82,7 +82,6 @@ class VaultServer:
         return value["data"] if value["success"] else None
 
     GET_TYPES = {
-        "uri",
         "totp",
         "notes",
         "exposed",
