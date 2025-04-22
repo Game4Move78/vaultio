@@ -16,7 +16,7 @@
 
 [project]
 name = "vaultio"
-version = "0.1.203"
+version = "0.1.3.05"
 description = "Unofficial tool for stateless Bitwarden vault management"
 authors = [
     {name = "Patrick Lenihan", email = "patrick@plenihan.com"}
@@ -28,7 +28,10 @@ dependencies = [
     "nodeenv (>=1.9.1,<2.0.0)",
     "fire (>=0.7.0,<0.8.0)",
     "psutil (>=7.0.0,<8.0.0)",
-    "rich (>=14.0.0,<15.0.0)"
+    "rich (>=14.0.0,<15.0.0)",
+    "requests (>=2.32.3,<3.0.0)",
+    "cryptography (>=44.0.2,<45.0.0)",
+    "argon2-cffi (>=23.1.0,<24.0.0)",
 ]
 
 [tool.poetry]
