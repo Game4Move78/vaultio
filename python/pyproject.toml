@@ -16,7 +16,7 @@
 
 [project]
 name = "vaultio"
-version = "0.1.4"
+version = "0.1.4.101"
 description = "Unofficial tool for stateless Bitwarden vault management"
 authors = [
     {name = "Patrick Lenihan", email = "patrick@plenihan.com"}

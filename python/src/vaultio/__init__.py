@@ -1,2 +1,2 @@
 from .scripts.build import build
-from .vault import Vault
+from .vault import Vault, VaultCLI, VaultSync
