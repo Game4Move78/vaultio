@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from vaultio.vault.api import MACError, create_derived_secrets, decrypt_sync, download_sync
+from vaultio.vault.api import MACError, create_derived_secrets, decrypt_sync, download_sync, refresh_sync
 from vaultio.util import CACHE_DIR, InputError, password_input
 
 CACHE = CACHE_DIR / "sync.json"
@@ -37,15 +37,13 @@ class VaultSync:
             password = password_input()
 
         if encrypted is None:
-            encrypted, derived_secrets = download_sync(email, password, provider_choice, provider_token)
+            encrypted = download_sync(email, password, provider_choice, provider_token)
             if cache is not None:
                 with open(cache, "w") as fout:
                     encrypted = json.dump(encrypted, fout)
-        else:
-            derived_secrets = create_derived_secrets(encrypted["email"], password, encrypted["kdf"])
 
         self.encrypted = encrypted
-        self.decrypted = decrypt_sync(encrypted, derived_secrets)
+        self.decrypted = None
 
         self.cache = cache
 
@@ -59,18 +57,24 @@ class VaultSync:
         self.decrypted = None
         return True
 
-    def unlock(self, password=None):
-        if password is None:
-            password = password_input()
+    def decrypt(self, password):
+
         derived_secrets = create_derived_secrets(self.encrypted["email"], password, self.encrypted["kdf"])
+
         try:
-            self.objects = decrypt_sync(self.encrypted, derived_secrets)
+            self.decrypted = decrypt_sync(self.encrypted, derived_secrets)
             return True
         except (InputError, MACError):
             return False
 
+    def unlock(self, password=None):
+        if password is None:
+            password = password_input()
+
+        self.decrypt(password)
+
     def sync(self):
-        raise NotImplementedError
+        refresh_sync(self.encrypted)
 
     def status(self):
         raise NotImplementedError

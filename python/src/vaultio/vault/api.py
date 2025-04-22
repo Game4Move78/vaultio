@@ -232,7 +232,7 @@ def check_token(r):
     if "access_token" not in r:
         raise AccessError(r)
 
-    return r["access_token"]
+    return r
 
 def request_access_token(email, secrets, device_id, provider_choice=None, provider_token=None):
 
@@ -247,10 +247,34 @@ def request_access_token(email, secrets, device_id, provider_choice=None, provid
 
     return check_token(r)
 
+def request_refresh_token(token, device_id):
+    payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": token["refresh_token"],
+        "scope": "api offline_access",
+        "client_id": "cli",
+        "deviceType": "8",
+        "deviceIdentifier": device_id,
+        "deviceName": user_agent,
+        "devicePushToken": "",
+    }
+    headers = {
+        "user-agent": user_agent,
+        "bitwarden-client-name": "cli",
+        "bitwarden-client-version": "1.13.2",
+        "device-type": "8",
+    }
+    r = requests.post("https://identity.bitwarden.com/connect/token", data=payload, headers=headers)
+    r.raise_for_status()
+    return token | r.json()
+
 def request_sync(token):
 
+    token_type = token["token_type"]
+    access_token = token["access_token"]
+
     headers = {
-        "authorization": f"Bearer {token}",
+        "authorization": f"{token_type} {access_token}",
         "user-agent": user_agent,
         "bitwarden-client-name": "cli",
         "bitwarden-client-version": client_version,
@@ -408,10 +432,31 @@ def download_sync(email=None, password=None, provider_choice=None, provider_toke
 
     derived_secrets = create_derived_secrets(email, password, kdf_info)
     token = request_access_token(email, derived_secrets, device_id, provider_choice, provider_token)
-    sync = request_sync(token)
+
+    sync = request_sync(token["access_token"])
     sync_secrets = create_sync_secrets(sync["profile"])
 
-    return dict(email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets), derived_secrets
+    return dict(token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
+
+def refresh_sync(sync):
+
+    device_id = str(uuid.uuid4())
+
+    email = sync["email"]
+    token = request_refresh_token(sync["token"], device_id)
+
+    kdf_info = dict(
+        kdfIterations=token["KdfIterations"],
+        kdfMemory=token["KdfMemory"],
+        kdfParallelism=token["KdfParallelism"],
+        kdf=token["Kdf"],
+    )
+
+    sync = request_sync(token)
+
+    sync_secrets = create_sync_secrets(sync["profile"])
+
+    return dict(token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
 
 def decrypt_sync(sync, derived_secrets):
 
