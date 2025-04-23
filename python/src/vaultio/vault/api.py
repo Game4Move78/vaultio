@@ -85,7 +85,6 @@ def create_derived_secrets(email, password, kdf_info):
             hash_len=32,
             type=argon2.low_level.Type.ID
         )
-        raise NotImplementedError
     else:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
