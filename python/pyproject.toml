@@ -13,34 +13,39 @@
 # You should have received a copy of the GNU General Public License
 # along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
-
 [project]
 name = "vaultio"
-version = "0.1.4.22"
+version = "0.2.101"
 description = "Unofficial tool for stateless Bitwarden vault management"
 authors = [
     {name = "Patrick Lenihan", email = "patrick@plenihan.com"}
 ]
-license = "GPL-3.0-or-later"
+license = {text = "GPL-3.0-or-later"}
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "nodeenv (>=1.9.1,<2.0.0)",
-    "fire (>=0.7.0,<0.8.0)",
-    "psutil (>=7.0.0,<8.0.0)",
-    "rich (>=14.0.0,<15.0.0)",
-    "requests (>=2.32.3,<3.0.0)",
-    "cryptography (>=44.0.2,<45.0.0)",
-    "argon2-cffi (>=23.1.0,<24.0.0)",
-    "requests-toolbelt (>=1.0.0,<2.0.0)",
+    "nodeenv>=1.9.1,<2.0.0",
+    "fire>=0.7.0,<0.8.0",
+    "psutil>=7.0.0,<8.0.0",
+    "rich>=14.0.0,<15.0.0",
+    "requests>=2.32.3,<3.0.0",
+    "cryptography>=44.0.2,<45.0.0",
+    "argon2-cffi>=23.1.0,<24.0.0",
+    "requests-toolbelt>=1.0.0,<2.0.0",
 ]
-
-[tool.poetry]
-packages = [{include = "vaultio", from = "src"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+packages = [
+    { include = "vaultio", from = "src" },
+    { include = "vaultio_examples", from = "src" }
+]
+
 [project.scripts]
 vaultio = "vaultio.scripts.cli:main"
+
+[tool.poetry.extras]
+examples = []
