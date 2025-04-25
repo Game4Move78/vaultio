@@ -21,8 +21,6 @@ import tempfile
 import fire
 from vaultio.util import SYNC_CACHE, password_input
 from vaultio.vault.api import create_vault_secrets, decrypt_blob_from_file, decrypt_blob_stream, decrypt_file_blob_to, decrypt_file_blob_stream, decrypt_object, decrypt_object_key, download_attachment, download_sync
-from vaultio.vault.server import HttpResponseError
-from vaultio.vault.vault_sync import VaultSync
 
 def read_cache(cache):
     with open(cache, "r") as fin:
@@ -175,10 +173,7 @@ class CLI:
                     os.unlink(attachment_dir / "data.bin.enc")
 
 def main():
-    try:
-        fire.Fire(CLI())
-    except HttpResponseError as err:
-        print(err.reason, err.content)
+    fire.Fire(CLI())
 
 if __name__ == '__main__':
     main()

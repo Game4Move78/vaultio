@@ -209,7 +209,7 @@ def request_login(email, secrets, device_id, provider=None, provider_token=None)
         if provider_token is None:
             provider_token = ask_input(provider["name"], provider["msg"], show=True)
         base_payload["twoFactorToken"] = provider_token,
-        base_payload["twoFactorProvider"] = str(provider["provider"]),
+        base_payload["twoFactorProvider"] = str(provider["provider"])
 
     headers = {
         "user-agent": user_agent,
