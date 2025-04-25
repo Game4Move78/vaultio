@@ -150,9 +150,9 @@ class VaultCLI:
         params = dict(itemid=item_id)
         return self.run_bytes("get", "attachment", attachment_id, params=params)
 
-    def new_attachment(self, uuid, fpath=None):
+    def new_attachment(self, item_id, fpath=None):
         assert self.allow_write
-        params = dict(itemid=uuid)
+        params = dict(itemid=item_id)
 
         if fpath is None:
             return self.run_json("create", "attachment", params=params)

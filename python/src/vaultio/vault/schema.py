@@ -103,52 +103,38 @@ CIPHER_TYPE_DEFAULTS = {
 def make_cipher(cipher: dict) -> dict:
     from copy import deepcopy
 
-    c = deepcopy(cipher)
-    c.setdefault("type", 1)
-    c.setdefault("name", None)
-    c.setdefault("notes", None)
-    c.setdefault("organizationId", None)
-    c.setdefault("folderId", None)
-    c.setdefault("favorite", False)
-    c.setdefault("reprompt", 0)
-    c.setdefault("fields", None)
-    c.setdefault("attachments", None)
-    c.setdefault("card", None)
-    c.setdefault("identity", None)
-    c.setdefault("secureNote", None)
-    c.setdefault("sshKey", None)
-    c.setdefault("key", None)
-    c.setdefault("object", "cipherDetails")
+    cipher = deepcopy(cipher)
+    cipher.setdefault("type", 1)
+    cipher.setdefault("name", None)
+    cipher.setdefault("notes", None)
+    cipher.setdefault("organizationId", None)
+    cipher.setdefault("folderId", None)
+    cipher.setdefault("favorite", False)
+    cipher.setdefault("reprompt", 0)
+    cipher.setdefault("fields", None)
+    cipher.setdefault("attachments", None)
+    cipher.setdefault("card", None)
+    cipher.setdefault("identity", None)
+    cipher.setdefault("secureNote", None)
+    cipher.setdefault("sshKey", None)
+    cipher.setdefault("key", None)
+    cipher.setdefault("object", "cipherDetails")
 
 
-    type_defaults = CIPHER_TYPE_DEFAULTS.get(c["type"], {})
+    type_defaults = CIPHER_TYPE_DEFAULTS.get(cipher["type"], {})
     for key, value in type_defaults.items():
-        c.setdefault(key, value)
+        cipher.setdefault(key, value)
 
-    return c
+    return cipher
 
-TEMPLATES = {
-    "cipher": {
-        "type": 1,
-        "name": "...",
-        "notes": None,
-        "organizationId": None,
-        "folderId": None,
-        "favorite": False,
-        "reprompt": 0,
-        "login": {
-            "username": "...",
-            "password": "...",
-            "totp": None,
-            "uris": []
-        },
-        "fields": None,
-        "attachments": None,
-        "card": None,
-        "identity": None,
-        "secureNote": None,
-        "sshKey": None,
-        "key": "...",
-        "object": "cipherDetails"
-    }
-}
+def make_attachment(attachment: dict) -> dict:
+    from copy import deepcopy
+
+    attachment = deepcopy(attachment)
+    attachment.setdefault("id", None)
+    assert "fileName" in attachment
+    attachment.setdefault("size", 0)
+    attachment.setdefault("url", None)
+    attachment.setdefault("object", "attachment")
+
+    return attachment

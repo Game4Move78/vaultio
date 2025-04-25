@@ -14,19 +14,24 @@
 # along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
 import base64
+from collections import deque
 import copy
 from csv import Error
+import datetime
+import itertools
 import re
 import sys
+import tempfile
 import uuid
 import json
+from requests_toolbelt import MultipartEncoder
 import requests
 from getpass import getpass
 import hashlib
 import os
 from rich.prompt import Prompt
 from vaultio.util import ask_input, choose_input, password_input
-from vaultio.vault.schema import ENCRYPTED_KEYS, INTERNAL_KEYS
+from vaultio.vault.schema import ENCRYPTED_KEYS, INTERNAL_KEYS, make_attachment
 
 from cryptography.hazmat.backends                   import default_backend
 from cryptography.hazmat.primitives                 import ciphers, kdf, hashes, hmac, padding
@@ -269,7 +274,7 @@ def request_refresh_token(token, device_id):
     r.raise_for_status()
     return token | r.json()
 
-def request_sync(token):
+def request_sync(token, device_id):
 
     token_type = token["token_type"]
     access_token = token["access_token"]
@@ -282,12 +287,19 @@ def request_sync(token):
         "device-type": "8",
     }
 
+    url = "https://api.bitwarden.com/sync"
+
     r = requests.get(
-        "https://api.bitwarden.com/sync",
+        url,
         headers=headers
     )
+    if r.status_code == 401:
+        token = request_refresh_token(token, device_id)
+        headers["authorization"] = authorization_header(token)
+        resp = requests.delete(url, headers=headers)
+
     r.raise_for_status()
-    return r.json()
+    return r.json(), token
 
 CHECK_ENC_MSG = "\n".join((
     "ERROR: Unsupported EncryptionType: {enc_type}",
@@ -324,7 +336,7 @@ def check_mac(old_mac, new_mac, msg=None):
     raise MACError(old_mac, new_mac, msg)
 
 CHECK_DECRYPT_MSG = "\n".join((
-    "Wrong Password. Could Not Decode Protected Symmetric Key."
+    "Wrong Password. Could Not Decode Protected Symmetric Key.",
 ))
 
 def check_decrypt(unpadder, decrypted):
@@ -333,12 +345,16 @@ def check_decrypt(unpadder, decrypted):
     except Exception as e:
         raise Exception(CHECK_DECRYPT_MSG)
 
-def decrypt_ciphertext(ciphertext, secrets) -> bytes:
-    tokens = ciphertext.split(".")
-    iv, text, mac = (
-        base64.b64decode(x)
-        for x in tokens[1].split("|")[:3]
-    )
+def decrypt_ciphertext2(text, secrets, iv) -> bytes:
+    padder = padding.PKCS7(128).padder()
+    text = padder.update(text) + padder.finalize()
+    unpadder    = padding.PKCS7(128).unpadder()
+    cipher      = Cipher(algorithms.AES(secrets["enc"]), modes.CBC(iv), backend=default_backend())
+    decryptor   = cipher.decryptor() 
+    decrypted   = decryptor.update(text) + decryptor.finalize()
+    return check_decrypt(unpadder, decrypted)
+
+def _decrypt(iv, text, mac, secrets) -> bytes:
 
     # Calculate ciphertext MAC
     h = hmac.HMAC(secrets["mac"], hashes.SHA256(), backend=default_backend())
@@ -355,12 +371,95 @@ def decrypt_ciphertext(ciphertext, secrets) -> bytes:
 
     return check_decrypt(unpadder, decrypted)
 
-def encrypt_ciphertext(plaintext, secrets) -> str:
+def _decrypt_stream(iv, chunks, mac, secrets):
 
-    iv = os.urandom(16)
+    # Calculate ciphertext MAC
+    h = hmac.HMAC(secrets["mac"], hashes.SHA256(), backend=default_backend())
+    h.update(iv)
+
+    unpadder    = padding.PKCS7(128).unpadder()
+    cipher      = Cipher(algorithms.AES(secrets["enc"]), modes.CBC(iv), backend=default_backend())
+    decryptor   = cipher.decryptor() 
+    # decrypted   = decryptor.update(text) + decryptor.finalize()
+
+    for chunk in chunks:
+        h.update(chunk)
+        chunk = decryptor.update(chunk)
+        yield unpadder.update(chunk)
+
+    new_mac = h.finalize()
+    check_mac(mac, new_mac)
+
+    chunk = decryptor.finalize()
+    yield unpadder.update(chunk) + unpadder.finalize()
+
+def decrypt_ciphertext(ciphertext, secrets) -> bytes:
+    tokens = ciphertext.split(".")
+    iv, text, mac = (
+        base64.b64decode(x)
+        for x in tokens[1].split("|")[:3]
+    )
+
+    return _decrypt(iv, text, mac, secrets)
+
+def decrypt_blob(data, secrets) -> bytes:
+    data = data[1:]
+    iv, mac, text = data[:16], data[16:16+32], data[16+32:]
+
+    return _decrypt(iv, text, mac, secrets)
+
+def resize_chunks(it, size):
+    it = iter(it)
+    bfr = bytearray()
+    for chunk in it:
+        bfr += chunk
+        while len(bfr) >= size:
+            yield bytes(bfr[:size])
+            bfr = bfr[size:]
+
+    while len(bfr) >= size:
+        yield bfr[:size]
+        bfr = bfr[size:]
+
+    if bfr:
+        yield bytes(bfr)
+
+def extract_chunk(chunks, size, initial=None):
+    bfr = bytearray()
+    if initial is not None:
+        bfr += initial
+    while len(bfr) < size:
+        bfr += next(chunks)
+    return bfr[:size], bfr[size:]
+
+def prepend_chunk(chunks, initial):
+    yield initial
+    yield from chunks
+
+def decrypt_blob_stream(chunks, secrets):
+    enc_type, chunk = extract_chunk(chunks, 1)
+    iv, chunk = extract_chunk(chunks, 16, chunk)
+    mac, chunk = extract_chunk(chunks, 32, chunk)
+    for chunk in _decrypt_stream(iv, prepend_chunk(chunks, chunk), mac, secrets):
+        if chunk:
+            yield chunk
+
+def iter_file_chunks(fin, chunk_size=8192):
+    while True:
+        chunk = fin.read(chunk_size)
+        if len(chunk) == 0:
+            return
+        yield chunk
+
+def decrypt_blob_from_file(fpath, secrets, chunk_size=8192):
+    with open(fpath, "rb") as fin:
+        chunks = iter_file_chunks(fin)
+        yield from decrypt_blob_stream(chunks, secrets)
+
+def _encrypt(iv, text, secrets):
 
     padder = padding.PKCS7(128).padder()
-    padded = padder.update(plaintext) + padder.finalize()
+    padded = padder.update(text) + padder.finalize()
 
     cipher = Cipher(
         algorithms.AES(secrets["enc"]),
@@ -368,16 +467,82 @@ def encrypt_ciphertext(plaintext, secrets) -> str:
         backend=default_backend()
     )
     encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(padded) + encryptor.finalize()
+    text = encryptor.update(padded) + encryptor.finalize()
 
     # Compute HMAC over IV + ciphertext
     h = hmac.HMAC(secrets["mac"], hashes.SHA256(), backend=default_backend())
     h.update(iv)
-    h.update(ciphertext)
+    h.update(text)
     mac = h.finalize()
 
-    b64 = lambda b: base64.b64encode(b).decode("utf-8")
-    return f"2.{b64(iv)}|{b64(ciphertext)}|{b64(mac)}"
+    return iv, text, mac
+
+def _encrypt_stream(iv, chunks, secrets):
+
+    padder = padding.PKCS7(128).padder()
+    # padded = padder.update(text) + padder.finalize()
+
+    cipher = Cipher(
+        algorithms.AES(secrets["enc"]),
+        modes.CBC(iv),
+        backend=default_backend()
+    )
+    encryptor = cipher.encryptor()
+    # text = encryptor.update(padded) + encryptor.finalize()
+    h = hmac.HMAC(secrets["mac"], hashes.SHA256(), backend=default_backend())
+    h.update(iv)
+
+    for chunk in chunks:
+        padded = padder.update(chunk)
+        chunk = encryptor.update(chunk)
+        h.update(chunk)
+        yield chunk
+
+    chunk = padder.finalize()
+    chunk = encryptor.update(chunk) + encryptor.finalize()
+    h.update(chunk)
+    yield chunk
+
+    # Compute HMAC over IV + ciphertext
+    mac = h.finalize()
+
+    yield mac
+
+def encrypt_ciphertext(text, secrets) -> str:
+    iv = os.urandom(16)
+
+    iv, text, mac = _encrypt(iv, text, secrets)
+
+    return "2." + "|".join((
+        base64.b64encode(x).decode("utf-8")
+        for x in (iv, text, mac)
+    ))
+
+def encrypt_blob(text, secrets):
+    iv = os.urandom(16)
+
+    iv, text, mac = _encrypt(iv, text, secrets)
+
+    return b"\x02" + iv + mac + text
+
+def encrypt_blob_to_file(chunks, secrets, fpath, chunk_size=8192):
+    iv = os.urandom(16)
+
+    chunks = _encrypt_stream(iv, chunks, secrets)
+
+    old = next(chunks)
+
+    with open(fpath, "wb") as fout:
+        fout.write(b"\x02" + iv + bytes(32))
+        for chunk in chunks:
+            fout.write(old)
+            old = chunk
+
+    mac = old
+
+    with open(fpath, "r+b") as fout:
+        fout.seek(1 + 16)
+        fout.write(mac)
 
 def decrypt_rsa(ciphertext, master_enc):
     tokens = ciphertext.split(".")
@@ -475,7 +640,7 @@ def download_sync(email=None, password=None, provider_choice=None, provider_toke
     derived_secrets = create_derived_secrets(email, password, kdf_info)
     token = request_access_token(email, derived_secrets, device_id, provider_choice, provider_token)
 
-    sync = request_sync(token)
+    sync, token = request_sync(token, device_id)
 
     sync["ciphers"] = {
         obj["id"]: obj
@@ -489,23 +654,23 @@ def download_sync(email=None, password=None, provider_choice=None, provider_toke
 
     sync_secrets = create_sync_secrets(sync["profile"])
 
-    return dict(token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
+    return dict(device_id=device_id, token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
 
 def refresh_sync(sync):
 
-    device_id = str(uuid.uuid4())
-
     email = sync["email"]
-    token = request_refresh_token(sync["token"], device_id)
+    sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
 
     kdf_info = dict(
-        kdfIterations=token["KdfIterations"],
-        kdfMemory=token["KdfMemory"],
-        kdfParallelism=token["KdfParallelism"],
-        kdf=token["Kdf"],
+        kdfIterations=sync["token"]["KdfIterations"],
+        kdfMemory=sync["token"]["KdfMemory"],
+        kdfParallelism=sync["token"]["KdfParallelism"],
+        kdf=sync["token"]["Kdf"],
     )
 
-    sync = request_sync(token)
+    device_id = sync["device_id"]
+
+    sync, token = request_sync(sync["token"], sync)
 
     sync["ciphers"] = {
         obj["id"]: obj
@@ -519,7 +684,7 @@ def refresh_sync(sync):
 
     sync_secrets = create_sync_secrets(sync["profile"])
 
-    return dict(token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
+    return dict(device_id=device_id, token=token, email=email, folders=sync["folders"], ciphers=sync["ciphers"], kdf=kdf_info, secrets=sync_secrets)
 
 def create_vault_secrets(sync, password):
     derived_secrets = create_derived_secrets(sync["email"], password, sync["kdf"])
@@ -544,36 +709,174 @@ UPDATE_TYPES = {
     "folder"
 }
 
-def update_request(sync, obj, type, new=False):
-
-    type = type.rstrip("s")
-
-    if type not in UPDATE_TYPES:
-        return
-
-    token = sync["token"]
-
+def authorization_header(token):
     token_type = token["token_type"]
     access_token = token["access_token"]
+    return f"{token_type} {access_token}"
 
+def update_request(sync, obj, type, new=False, delete=False, get=False):
+    type = type.rstrip("s")
+    if type not in UPDATE_TYPES:
+        return
     headers = {
-        "authorization": f"{token_type} {access_token}",
+        "authorization": authorization_header(sync["token"]),
         "user-agent": user_agent,
         "bitwarden-client-name": "cli",
         "bitwarden-client-version": client_version,
         "device-type": "8",
         "Content-Type": "application/json",
     }
-
-    if new:
-        r = requests.post(f"https://api.bitwarden.com/{type}s", headers=headers, json=obj)
+    if delete:
+        id = obj
+        url = f"https://api.bitwarden.com/{type}s/{id}"
+        r = requests.delete(url, headers=headers)
         if r.status_code == 401:
-            token = refresh_sync(sync)
-            access_token = token["access_token"]
-            resp = requests.post(..., headers={"Authorization": f"Bearer {access_token}"})
-    else:
-        uuid = obj["id"]
-        r = requests.put(f"https://api.bitwarden.com/{type}s/{uuid}", headers=headers, json=obj)
-
+            sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
+            headers["authorization"] = authorization_header(sync["token"])
+            resp = requests.delete(url, headers=headers)
+    elif new:
+        url = f"https://api.bitwarden.com/{type}s"
+        r = requests.post(url, headers=headers, json=obj)
+        if r.status_code == 401:
+            sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
+            headers["authorization"] = authorization_header(sync["token"])
+            resp = requests.post(url, headers=headers)
+    elif get:
+        id = obj
+        url = f"https://api.bitwarden.com/{type}s/{id}"
+        r = requests.get(url, headers=headers)
+        if r.status_code == 401:
+            sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
+            headers["authorization"] = authorization_header(sync["token"])
+            resp = requests.get(url, headers=headers)
+    else: #put
+        id = obj["id"]
+        url = f"https://api.bitwarden.com/{type}s/{id}"
+        r = requests.put(url, headers=headers, json=obj)
+        if r.status_code == 401:
+            sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
+            headers["authorization"] = authorization_header(sync["token"])
+            resp = requests.put(url, headers=headers)
     r.raise_for_status()
     return r.json()
+
+def request_attachment(sync, item_id, attachment_id):
+    headers = {
+        "authorization": authorization_header(sync["token"]),
+        "user-agent": user_agent,
+        "bitwarden-client-name": "cli",
+        "bitwarden-client-version": client_version,
+        "device-type": "8",
+    }
+
+
+    url = f"https://api.bitwarden.com/ciphers/{item_id}/attachment/{attachment_id}"
+    r = requests.get(url, headers=headers)
+
+    if r.status_code == 401:
+        sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
+        headers["authorization"] = authorization_header(sync["token"])
+        r = requests.get(url, headers=headers)
+
+    r.raise_for_status()
+
+    return r.json()
+
+def request_attachment_new(sync, item_id, key, fname, fsize):
+    headers = {
+        "authorization": authorization_header(sync["token"]),
+        "user-agent": user_agent,
+        "bitwarden-client-name": "cli",
+        "bitwarden-client-version": client_version,
+        "device-type": "8",
+    }
+
+    payload = {
+        "fileName": fname,
+        "key": key,
+        "fileSize": fsize,
+        "adminRequest": False,
+    }
+
+    url = f"https://api.bitwarden.com/ciphers/{item_id}/attachment/v2"
+    r = requests.post(url, headers=headers, json=payload)
+
+    if r.status_code == 401:
+        sync["token"] = request_refresh_token(sync["token"], sync["device_id"])
+        headers["authorization"] = authorization_header(sync["token"])
+        r = requests.post(url, headers=headers, json=payload)
+
+    r.raise_for_status()
+
+    return r.json()
+
+def decrypt_file_blob_stream(path, secrets, chunk_size=8192):
+    with open(path, "rb") as fin:
+        chunks = iter_file_chunks(fin, chunk_size)
+        yield from decrypt_blob_stream(chunks, secrets)
+
+def decrypt_file_blob_to(src, dst, secrets, chunk_size=8192):
+    with open(src, "rb") as fin, open(dst, "wb") as fout:
+        chunks = iter_file_chunks(fin, chunk_size)
+        for chunk in decrypt_blob_stream(chunks, secrets):
+            fout.write(chunk)
+
+def download_attachment(sync, item_id, attachment_id, secrets=None, chunk_size=8192, decrypted=False):
+    attachment = request_attachment(sync, item_id, attachment_id)
+    r = requests.get(attachment["url"], stream=True)
+    r.raise_for_status()
+    chunks = r.iter_content(chunk_size=chunk_size)
+    if decrypted:
+        assert secrets is not None
+        secrets = decrypt_object_key(attachment["key"], secrets)
+        yield from decrypt_blob_stream(chunks, secrets)
+    else:
+        yield from chunks
+
+def parse_azure_sas_params(url):
+    from urllib.parse import urlparse, parse_qs
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
+    version = query_params.get("sv", [None])[0]
+    expiry = query_params.get("se", [None])[0]
+    permissions = query_params.get("sp", [None])[0]
+    signature = query_params.get("sig", [None])[0]
+    return {
+        "version": version,
+        "expiry": expiry,
+        "permissions": permissions,
+        "signature": signature,
+    }
+
+def encrypt_file(src, dst, secrets, chunk_size=8192):
+    with open(src, "rb") as fin:
+        encrypt_blob_to_file(iter_file_chunks(fin), secrets, dst, chunk_size)
+
+def upload_attachment(sync, item_id, fpath, secrets, chunk_size=8192, encrypt=True):
+    fname = os.path.basename(fpath)
+    fname = encrypt_ciphertext(fname.encode("utf-8"), secrets)
+    key, secrets = new_object_key(secrets)
+    if encrypt:
+        fpath = fpath + ".enc"
+        encrypt_file(fpath, fpath, secrets, chunk_size)
+    # with open(fpath, "rb") as fin:
+    #     encrypt_blob_to_file(iter_file_chunks(fin), secrets, fpath, chunk_size)
+    for chunk in decrypt_blob_from_file(fpath, secrets):
+        print(chunk)
+    fsize = os.path.getsize(fpath)
+    attachment = request_attachment_new(sync, item_id, key, fname, fsize)
+    params = parse_azure_sas_params(attachment["url"])
+    # https://github.com/bitwarden/clients/blob/main/libs/common/src/platform/services/file-upload/azure-file-upload.service.ts#L11
+    headers = {
+        "x-ms-date": datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        "x-ms-version": params["version"],
+        "Content-Length": str(fsize),
+        "x-ms-blob-type": "BlockBlob",
+    }
+    with open(fpath, "rb") as fin:
+        r = requests.put(
+            attachment["url"],
+            data=fin,
+            headers=headers
+        )
+    r.raise_for_status()

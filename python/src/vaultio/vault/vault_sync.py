@@ -13,20 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with vaultio.  If not, see <https://www.gnu.org/licenses/>.
 
+import base64
 import json
 import os
 from pathlib import Path
 import subprocess
 
-from vaultio.vault.api import MACError, create_derived_secrets, create_vault_secrets, decrypt_object, decrypt_sync, download_sync, encrypt_ciphertext, encrypt_object, encrypt_sync, new_object_key, refresh_sync, update_request
-from vaultio.util import CACHE_DIR, InputError, password_input
-from vaultio.vault.schema import TEMPLATES, make_cipher
-
-CACHE = CACHE_DIR / "sync.json"
+import requests
+from vaultio.vault.api import MACError, create_derived_secrets, create_vault_secrets, decrypt_blob, decrypt_blob_stream, decrypt_ciphertext, decrypt_object, decrypt_object_key, decrypt_sync, download_attachment, download_sync, encrypt_ciphertext, encrypt_object, encrypt_sync, new_object_key, refresh_sync, request_attachment, update_request, upload_attachment
+from vaultio.util import CACHE_DIR, SYNC_CACHE, InputError, password_input
+from vaultio.vault.schema import make_cipher
 
 class VaultSync:
 
-    def __init__(self, encrypted=None, email=None, password=None, provider_choice=None, provider_token=None, cache=CACHE) -> None:
+    def __init__(self, encrypted=None, email=None, password=None, provider_choice=None, provider_token=None, cache=SYNC_CACHE) -> None:
 
         if cache is not None and Path(cache).exists():
             with open(cache, "r") as fin:
@@ -35,8 +35,6 @@ class VaultSync:
             encrypted = None
 
         if encrypted is None:
-            if password is None:
-                password = password_input()
             encrypted = download_sync(email, password, provider_choice, provider_token)
             if cache is not None:
                 with open(cache, "w") as fout:
@@ -79,11 +77,25 @@ class VaultSync:
     def decrypt(self, secrets):
 
         try:
+            import copy
+            removed = ["3cd45930-7f43-41bf-a5b7-b2c7014054a8"]
+            for item in copy.deepcopy(self.encrypted["ciphers"]).values():
+                try:
+                    name = decrypt_ciphertext(item["name"], secrets).decode("utf-8")
+                except Exception:
+                    continue
+                if "vaultio" in name and item["id"] not in removed:
+                    print("Removing " + item["id"])
+                    assert input("Continue? ") == "y"
+                    print()
+                    update_request(self.encrypted, item["id"], "cipher", delete=True)
             self.decrypted = decrypt_sync(self.encrypted, secrets)
             self.secrets = secrets
             return True
-        except (InputError, MACError):
-            return False
+        except Exception:
+            raise
+        # except (InputError, MACError):
+        #     return False
 
     def unlock(self, password=None):
 
@@ -96,6 +108,9 @@ class VaultSync:
 
     def sync(self):
         self.encrypted = refresh_sync(self.encrypted)
+        if self.secrets is not None:
+            self.decrypted = decrypt_sync(self.encrypted, self.secrets)
+        return True
 
     def status(self):
         raise NotImplementedError
@@ -115,10 +130,10 @@ class VaultSync:
         raise NotImplementedError
 
     def get_attachment(self, attachment_id, item_id):
-        raise NotImplementedError
+        yield from download_attachment(self.encrypted, item_id, attachment_id, self.secrets)
 
-    def new_attachment(self, uuid, fpath=None):
-        raise NotImplementedError
+    def new_attachment(self, item_id, fpath=None):
+        return upload_attachment(self.encrypted, item_id, fpath, self.secrets)
 
     GET_TYPES = {
         "totp",
@@ -154,8 +169,9 @@ class VaultSync:
     def new(self, value, type="item"):
         if type == "item":
             value = make_cipher(value)
-            value["key"], _ = new_object_key(self.secrets)
+            # value["key"], _ = new_object_key(self.secrets)
         value = encrypt_object(value, self.secrets)
+        decrypt_object(value, self.secrets)
         if type == "folder":
             value = update_request(self.encrypted, value, "folder", new=True)
         elif type == "item":

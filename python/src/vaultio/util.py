@@ -110,3 +110,5 @@ def choose_input(field, choices, title=None, prompt=None, show=False):
     root.destroy()
 
     return dialog.result
+
+SYNC_CACHE = CACHE_DIR / "sync.json"

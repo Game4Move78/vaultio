@@ -110,6 +110,11 @@ with Vault() as vault:
 
 Not currently supported directly, but it's possible using [Caddy](https://github.com/Game4Move78/bw-serve-encrypted).
 
+## Acknowledgements
+
+- [`BitwardenDecrypt`](https://github.com/GurpreetKang/BitwardenDecrypt) for the code to decrypt a vault and derive keys
+- [`rbw`](https://github.com/doy/rbw/) for the API calls
+
 ## Related
 
 - [`PyWarden`](https://github.com/stefanfluit/PyWarden) is a Python Bitwarden CLI wrapper
