@@ -71,8 +71,8 @@ def require_bw():
         raise Exception("BW CLI not found. Try `vaultio build` to resolve dependencies.")
 
 def require_bw_socks():
-    if SOCK_SUPPORT is None:
-        raise Exception("BW CLI supporting socket serve not found. Try `vaultio build ` to resolve dependencies.")
+    if not SOCK_SUPPORT:
+        raise Exception("BW CLI supporting socket serve not found (>2025.8.0). Try `vaultio build` to resolve dependencies.")
 
 def bw_serve(socks=None, host=None, port=None, sock_path=None, fd=None, bw_path=None, **kwds):
     if BW_PATH is None:

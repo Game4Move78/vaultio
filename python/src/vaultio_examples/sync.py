@@ -66,7 +66,7 @@ class CLI:
         if cache is not None:
             with open(cache, "w") as fout:
                 json.dump(encrypted, fout)
-                
+
     def download(self, destination: Path, cache: Path=SYNC_CACHE):
 
         encrypted = read_cache(cache)

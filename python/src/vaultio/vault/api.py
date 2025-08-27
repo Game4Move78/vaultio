@@ -475,7 +475,7 @@ def _encrypt(iv, text, secrets):
     h.update(text)
     mac = h.finalize()
 
-    return iv, text, mac
+    return text, mac
 
 def _encrypt_stream(iv, chunks, secrets):
 
@@ -511,7 +511,7 @@ def _encrypt_stream(iv, chunks, secrets):
 def encrypt_ciphertext(text, secrets) -> str:
     iv = os.urandom(16)
 
-    iv, text, mac = _encrypt(iv, text, secrets)
+    text, mac = _encrypt(iv, text, secrets)
 
     return "2." + "|".join((
         base64.b64encode(x).decode("utf-8")

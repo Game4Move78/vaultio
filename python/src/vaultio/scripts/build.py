@@ -66,19 +66,11 @@ def clone_bw():
         log_info(f"Cleaning up {root_dir}")
         shutil.rmtree(root_dir)
 
-    repo_url = "https://github.com/Game4Move78/clients"
-    repo_branch = "vaultio"
-
-    upstream_url = "https://github.com/bitwarden/clients"
-    upstream_branch = "main"
+    repo_url = "https://github.com/bitwarden/clients"
+    repo_branch = "main"
 
     log_clone(f"Cloning Bitwarden CLI from {repo_url}")
     subprocess.run(["git", "clone", repo_url, str(root_dir), "--depth", "1", "--single-branch", "--branch", repo_branch], check=True)
-
-    log_info(f"Showing difference from official")
-    subprocess.run(["git", "remote", "set-url", "upstream", upstream_url], check=True)
-    subprocess.run(["git", "fetch", "upstream"], check=True)
-    subprocess.run(["git", "--no-pager", "diff", "upstream/main..vaultio"], check=True)
 
     assert root_dir.exists()
     assert cli_dir.exists()
@@ -107,17 +99,6 @@ def build_bw():
 
     root_dir, cli_dir = clone_bw()
 
-    resp = Prompt.ask(
-        "[bold yellow]:construction: Diff against official repo[/bold yellow]. Proceed with build?",
-        choices=["y", "n"],
-        default="n",
-        show_choices=False
-    ).strip().lower()
-
-    if resp.strip().lower()[:1] != "y":
-        print("Aborting.")
-        return
-
     log_done(f"Bitwarden CLI repo found in {root_dir}")
 
     assert cli_dir.exists(), f"Expected BW directory not found at: {cli_dir}"
@@ -142,21 +123,21 @@ def build_bw():
 
     shutil.rmtree(root_dir)
 
-def build(unofficial=False):
+def build(source=True):
     choice = Prompt.ask(
         "\n[bold cyan]:rocket: Build Bitwarden CLI[/bold cyan]\n"
         ":point_right: Choose a source:\n"
-        "  [green]official[/green]   - install via npm\n"
-        "  [magenta]unofficial[/magenta] - build fork from source\n",
-        choices=["official", "unofficial"],
-        default="unofficial" if unofficial else "official"
+        "  [green]npm[/green]   - install via npm\n"
+        "  [magenta]source[/magenta] - build fork from source\n",
+        choices=["npm", "source"],
+        default="source" if source else "npm"
     )
-    if unofficial:
-        log_info("Unofficial build mode: building Bitwarden CLI fork from source.")
+    if choice == "source":
+        log_info("Source build mode: building Bitwarden CLI fork from source.")
         build_nodeenv()
         build_bw()
     else:
-        log_info("Official mode: Installing Bitwarden CLI via npm.")
+        log_info("Npm mode: Installing Bitwarden CLI via npm.")
         if not shutil.which("npm"):
             build_nodeenv()
         log_download(f"Installing @bitwarden/cli globally with prefix {CACHE_DIR}")

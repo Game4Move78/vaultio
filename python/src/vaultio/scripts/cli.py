@@ -33,8 +33,8 @@ class CLI(Vault):
             port = int(8087)
             super().__init__(host=host, port=port, serve=False, wait=False)
 
-    def build(self, unofficial=False):
-        build(unofficial)
+    def build(self, source=True):
+        build(source)
 
 def main():
     try:

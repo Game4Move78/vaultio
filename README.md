@@ -34,7 +34,7 @@ poetry install
 
 ## Installing the Bitwarden CLI
 
-### Option 1: Official CLI
+### Option 1: NPM package (TCP sockets only)
 
 By default, `bw serve` exposes its API via **HTTP over TCP**, which can be less secure since other users or apps might access the unlocked vault without proper firewall rules.
 
@@ -48,12 +48,12 @@ vaultio build
 
 This installs the CLI from the official NPM package [`@bitwarden/cli`](https://www.npmjs.com/package/@bitwarden/cli).
 
-### Option 2: Unofficial Fork with Socket Support
+### Option 2: Official Bitwarden with socket support
 
-I made a [pull request](https://github.com/bitwarden/vaults/pull/14262) that introduces support for Unix sockets and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security.
+[This commit](https://github.com/bitwarden/vaults/pull/14262) introduces support for Unix sockets and other socket types in `bw serve`. This allows communication without traversing the network stack, improving security. It will be added to the NPM package in a later release.
 
 To enable this:
-- **Manually build** from the fork: [Game4Move78/vaults#vaultio](https://github.com/Game4Move78/vaults/tree/feat/vaultio) and copy the binary to:
+- **Manually build** from main branch: [bitwarden/clients#main](https://github.com/bitwarden/clients) and copy the binary to (or somewhere on your PATH):
 
 ```sh
 $HOME/.cache/vaultio/bin/bw
@@ -62,10 +62,8 @@ $HOME/.cache/vaultio/bin/bw
 - **Or**, let `vaultio` handle it for you:
 
 ```sh
-vaultio --unofficial
+vaultio --source
 ```
-
-This will clone the repo and build it locally. Then it will show you a diff against the [official repo](https://github.com/bitwarden/vaults) before prompting you to continue.
 
 ---
 

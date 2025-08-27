@@ -15,6 +15,7 @@
 
 from pathlib import Path
 import shutil
+import subprocess
 from tkinter import simpledialog
 import psutil
 import tkinter as tk
@@ -37,11 +38,22 @@ def kill_process_listening_on_socket(socket_path):
 CACHE_DIR = Path.home() / ".cache" / "vaultio"
 
 if (CACHE_DIR / "bin" / "bw").exists():
-    SOCK_SUPPORT = True
     BW_PATH = CACHE_DIR / "bin" / "bw"
 else:
-    SOCK_SUPPORT = False
     BW_PATH = shutil.which("bw")
+
+def bw_version():
+    if BW_PATH is None:
+        return None
+    res = subprocess.run([BW_PATH, "--raw", "--version"], stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    if res.returncode == 0:
+        return tuple(map(int, res.stdout.split(".")))
+    else:
+        return None
+
+BW_VERSION = bw_version()
+
+SOCK_SUPPORT = (BW_VERSION is not None and BW_VERSION >= (2025, 8, 0))
 
 def remove_none(value):
     ret = {k: v for k, v in value.items() if v is not None}
