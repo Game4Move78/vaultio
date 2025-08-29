@@ -53,7 +53,7 @@ def bw_version():
 
 BW_VERSION = bw_version()
 
-SOCK_SUPPORT = (BW_VERSION is not None and BW_VERSION >= (2025, 8, 0))
+SOCK_SUPPORT = (BW_VERSION is not None and BW_VERSION >= (2025, 8, 1))
 
 def remove_none(value):
     ret = {k: v for k, v in value.items() if v is not None}
