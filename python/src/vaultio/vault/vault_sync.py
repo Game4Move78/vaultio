@@ -78,13 +78,12 @@ class VaultSync:
 
         try:
             import copy
-            removed = ["3cd45930-7f43-41bf-a5b7-b2c7014054a8"]
             for item in copy.deepcopy(self.encrypted["ciphers"]).values():
                 try:
                     name = decrypt_ciphertext(item["name"], secrets).decode("utf-8")
                 except Exception:
                     continue
-                if "vaultio" in name and item["id"] not in removed:
+                if "vaultio" in name:
                     print("Removing " + item["id"])
                     assert input("Continue? ") == "y"
                     print()
