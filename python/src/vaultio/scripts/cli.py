@@ -38,7 +38,9 @@ class CLI(Vault):
 
 def main():
     try:
-        fire.Fire(CLI())
+        import json
+        serialize = lambda x: json.dumps(x, ensure_ascii=False, separators=(",", ":"))
+        fire.Fire(CLI(), serialize=serialize)
     except HttpResponseError as err:
         print(err.reason, err.content)
 
